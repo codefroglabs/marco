@@ -18,7 +18,6 @@
     public EventCallback<FormDto> OnComplete { get; set; }
 
     private string jsonRequest = "";
-    private bool newJson = false;
     private bool generatingForm = false;
     private ServerFormAiClient? aiClient = null;
     private readonly JsonSerializerOptions jsonOptions = new JsonSerializerOptions
@@ -42,7 +41,6 @@
         generatingForm = true;
         logger.LogInformation("Generating new form: {0}", jsonRequest);
         var request = jsonRequest;
-        newJson = false;
         if (aiClient != null)
         {
             logger.LogInformation("Generating form with AI");

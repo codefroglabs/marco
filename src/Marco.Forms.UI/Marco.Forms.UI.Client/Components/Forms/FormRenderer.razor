@@ -24,7 +24,6 @@
 </EditForm>
 
 @code {
-    bool submitted;
     [Inject] public required FormStore Store { get; set; }
 
     [Parameter] public required FormDto Form { get; set; }
@@ -50,7 +49,6 @@
         }
 
         Store.RecordSubmission(submission);
-        submitted = true;
     }
 
 }

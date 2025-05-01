@@ -2,13 +2,15 @@ namespace Marco.Forms.UI.Client.Components.Forms;
 
 public class ServerFormAiClient
 {
-    public async Task ListenForFormRequestAsync(Func<string?, string?, Task> onFormGenerated)
+    public Task ListenForFormRequestAsync(Func<string?, string?, Task> onFormGenerated)
     {
         // implementation removed
+        return Task.CompletedTask;
     }
 
-    public async Task GenerateFormAsync(string request)
+    public Task GenerateFormAsync(string request)
     {
         // implementation removed
+        return Task.CompletedTask;
     }
 }

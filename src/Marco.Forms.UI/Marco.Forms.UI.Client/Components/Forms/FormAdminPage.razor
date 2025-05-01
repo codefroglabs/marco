@@ -125,7 +125,6 @@
 </Sheet>
 
 @code {
-    private bool open2;
     [Inject] public required NavigationManager Nav { get; set; }
 
     private bool ShowFormFlyout { get; set; }
@@ -150,7 +149,6 @@
 
     private ServerFormAiClient? aiClient = null;
     private string jsonRequest = "";
-    private bool newJson = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -277,7 +275,6 @@
         generatingForm = true;
         logger.LogInformation("Generating new form: {0}", jsonRequest);
         var request = jsonRequest;
-        newJson = false;
         if (aiClient != null)
         {
             logger.LogInformation("Generating form with AI");
