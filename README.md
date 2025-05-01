@@ -1,3 +1,6 @@
+> [!NOTE]  
+> Marco is freshly extracted from PureBlazor. We're working through demos, documentations, and picking up the progress.
+
 # Marco
 
 Marco was born as part of [PureBlazor](https://pureblazor.com). Initially, Marco was a simple block-based page builder for Blazor. Then, we added the capability to create and manage forms.
