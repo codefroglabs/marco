@@ -1,0 +1,15 @@
+@inherits LayoutComponentBase
+
+<div class="h-screen overflow-y-auto bg-white">
+    @Body
+</div>
+
+<div id="blazor-error-ui" class="container text-3xl">
+    An unhandled error has occurred.
+    <a href="" class="reload">Reload</a>
+    <a class="dismiss">🗙</a>
+</div>
+
+@code {
+    [Inject] public required NavigationManager Nav { get; set; }
+}

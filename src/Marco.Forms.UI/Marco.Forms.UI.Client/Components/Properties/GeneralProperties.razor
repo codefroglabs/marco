@@ -1,0 +1,419 @@
+@using Marco.Forms.UI.Client.Components.Blocks
+@using Marco.Forms.UI.Client.Components.Primitives
+@using Marco.Forms.UI.Client.Components.Shared
+@using Marco.Forms.UI.Client.Models
+@using BlockTypes = Marco.Forms.UI.Client.Models.BlockTypes
+@using LinkBlockData = Marco.Forms.UI.Client.Models.LinkBlockData
+@using ListBlockData = Marco.Forms.UI.Client.Models.ListBlockData
+@using ListItem = Marco.Forms.UI.Client.Models.ListItem
+@using Pure.Blazor.Components
+@using Pure.Blazor.Components.Forms
+@if (Block.BlockType != BlockTypes.Root && Block.BlockType != BlockTypes.Section && Block.BlockType != BlockTypes.Container && Block.BlockType != BlockTypes.Block)
+{
+    <div class="flex gap-1 items-center">
+        <legend class="text-[10px] pb-1 pt-2 font-bold uppercase text-gray-600">Text Type</legend>
+        <HoverToggle>
+            <ChildContent>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"
+                     class="size-4 text-gray-600">
+                    <path fill-rule="evenodd"
+                          d="M15 8A7 7 0 1 1 1 8a7 7 0 0 1 14 0ZM9 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0ZM6.75 8a.75.75 0 0 0 0 1.5h.75v1.75a.75.75 0 0 0 1.5 0v-2.5A.75.75 0 0 0 8.25 8h-1.5Z"
+                          clip-rule="evenodd"/>
+                </svg>
+            </ChildContent>
+            <HoverContent>
+                <div class="relative z-20">
+                    <p class="absolute left-0 w-52 text-balance bg-white rounded-xl ring-1 ring-brand-700 p-1 text-xs text-gray-700">
+                        Text type only changes the HTML element, not the appearance.</p>
+                </div>
+            </HoverContent>
+        </HoverToggle>
+    </div>
+    <PureDropdown Styles="bg-white" Size="PureSize.Small" Title="@textType">
+        @foreach (var t in textTypes)
+        {
+            <PureDropdownItem OnItemSelected="() => TextTypeChanged(t)">@t</PureDropdownItem>
+        }
+    </PureDropdown>
+    <legend class="text-[10px] pb-1 pt-2 font-bold uppercase text-gray-600">Font</legend>
+    <PureDropdown Styles="bg-white" Size="PureSize.Small" Title="@FontFamily">
+        <PureDropdownItem OnItemSelected="() => FontFamilyChanged(0)">Sans</PureDropdownItem>
+        <PureDropdownItem OnItemSelected="() => FontFamilyChanged(1)">Serif</PureDropdownItem>
+        <PureDropdownItem OnItemSelected="() => FontFamilyChanged(2)">Mono</PureDropdownItem>
+    </PureDropdown>
+
+    <div>
+        <legend class="text-[10px] pb-1 pt-2 font-bold uppercase text-gray-600">Font Size
+            (@Formatting.FontSizeUnit.ToString())
+        </legend>
+
+        @* <PureLabel Size="PureSize.ExtraSmall">Font size</PureLabel> *@
+        <div class="flex gap-2">
+            <div>
+                <PureInput Styles="bg-white" Value="FontSize" ValueChanged="FontSizeChanged"/>
+            </div>
+            <p>@FontSizeDisplay</p>
+        </div>
+    </div>
+    <div>
+        <legend class="text-[10px] pb-1 pt-2 font-bold uppercase text-gray-600">Font Weight</legend>
+        @* <PureLabel Size="PureSize.ExtraSmall">Font weight</PureLabel> *@
+        <div class="flex gap-2">
+            <div>
+                <PureSlider Value="FontWeight" ValueChanged="FontWeightChanged" Max="@((double)FontWeights.VeryBold)"
+                            Min="1"/>
+            </div>
+            <p>@FontWeightDisplay</p>
+        </div>
+    </div>
+    <div>
+        <PureLabel Size="PureSize.ExtraSmall">Text color</PureLabel>
+        <div class="flex items-center gap-2 rounded">
+            <button @onclick="() => TextColorChanged(TailwindColor.Black)"
+                    class="w-8 h-8 cursor-pointer bg-black border-gray-300 border-1 rounded"></button>
+            <button @onclick="() => TextColorChanged(TailwindColor.White)"
+                    class="w-8 h-8 cursor-pointer bg-white border-gray-300 border-1 rounded"></button>
+            <button @onclick="@(() => textColorPickerVisible = !textColorPickerVisible)"
+                    class="w-8 h-8 border-gray-300 border-1 rounded cursor-pointer bg-gradient-to-br from-red-600 to-blue-600"></button>
+            <span>@TextColor.ToString()</span>
+        </div>
+        @if (textColorPickerVisible)
+        {
+            if (advancedColorPicker)
+            {
+                <ColorPicker Color="@TextColorV2" ColorChanged="TextColorV2Changed"/>
+            }
+            else
+            {
+                <div class="flex gap-2">
+                    <div class="grid-cols-9 grid">
+                        @foreach (var color in Enum.GetValues<TailwindColor>()
+                                          .Where(p =>
+                                              // exclude black/white/transparent
+                                              p.ToString().EndsWith("0") &&
+                                              // exclude the lowest and highest shades
+                                              // this is mostly a visual appearance thing and my skepticism on them being required
+                                              !p.ToString().EndsWith("50") && !p.ToString().EndsWith("950"))
+                                          // reverse the order to show the darkest shades first
+                                          .Reverse())
+                        {
+                            <button @ondblclick="@(async () =>
+                                                 {
+                                                     await TextColorChanged(color);
+                                                     textColorPickerVisible = false;
+                                                 })" @onclick="@(() => TextColorChanged(color))"
+                                    class="w-6 h-6 hover:scale-150 hover:shadow hover:rounded cursor-pointer @($"{TailwindBackgroundColorMapper.MapEnumToTailwindBackgroundColorClass(color)}")"></button>
+                        }
+                    </div>
+                </div>
+            }
+        }
+    </div>
+}
+
+<legend class="text-[10px] pb-1 pt-2 font-bold uppercase text-gray-600">Border</legend>
+@if (Formatting.Border is not null)
+{
+    <legend class="text-[10px] pb-1 pt-2 font-bold uppercase text-gray-600">Border Width</legend>
+    <div class="flex gap-2">
+        <div>
+            <PureSlider Value="Formatting.Border.Width"
+                        ValueChanged="async (v) => { Formatting.Border.Width = v; await FormattingChanged.InvokeAsync(Formatting); }"
+                        Max="6" Min="0"/>
+        </div>
+        <p>@Formatting.Border.Width</p>
+    </div>
+    <legend class="text-[10px] pb-1 pt-2 font-bold uppercase text-gray-600">Border Color</legend>
+    <div class="flex gap-2">
+        <div>
+            <PureInput Value="Formatting.Border.Color" ValueChanged="UpdateBorderColor"/>
+        </div>
+    </div>
+}
+else
+{
+    <PureButton Size="PureSize.Small" Variant="PureVariant.Outline" OnClick="@(() => Formatting.Border = new Border())">
+        Add Border
+    </PureButton>
+}
+@if (Block is { BlockType: BlockTypes.Link, BlockData: LinkBlockData linkBlockData })
+{
+    <div class="flex flex-col gap-2">
+        <legend class="text-[10px] pb-1 pt-2 font-bold uppercase text-gray-600">Link settings</legend>
+        <div class="flex flex-col gap-2">
+            <div>
+                <legend class="text-[10px] pb-1 pt-2 font-bold uppercase text-gray-600">Link Text</legend>
+                <PureInput Value="@linkBlockData.Text" ValueChanged="@(async (v) =>
+                                                                     {
+                                                                         linkBlockData.Text = v;
+                                                                         var block = Block with { BlockData = linkBlockData };
+                                                                         await BlockChanged.InvokeAsync(block);
+                                                                     })"/>
+            </div>
+            <div>
+                <legend class="text-[10px] pb-1 pt-2 font-bold uppercase text-gray-600">Link Url</legend>
+                <PureInput Value="@linkBlockData.Url" ValueChanged="@(async (v) =>
+                                                                    {
+                                                                        linkBlockData.Url = v;
+                                                                        var block = Block with { BlockData = linkBlockData };
+                                                                        await BlockChanged.InvokeAsync(block);
+                                                                    })"/>
+            </div>
+        </div>
+    </div>
+}
+
+@if (Block is { BlockType: BlockTypes.List, BlockData: ListBlockData listBlockData })
+{
+    <div class="flex flex-col gap-2">
+        <legend class="text-[10px] pb-1 pt-2 font-bold uppercase text-gray-600">List data</legend>
+        @foreach (var item in listBlockData.Items)
+        {
+            <div class="flex gap-2">
+                <PureInput Value="@item.Text" ValueChanged="@(async (v) =>
+                                                            {
+                                                                item.Text = v;
+                                                                var block = Block with { BlockData = listBlockData };
+                                                                await BlockChanged.InvokeAsync(block);
+                                                            })"/>
+                <PureButton Size="PureSize.Small" Variant="PureVariant.Outline" OnClick="@(() =>
+                                                                                         {
+                                                                                             listBlockData.Items.Remove(item);
+                                                                                             var block = Block with { BlockData = listBlockData };
+                                                                                             BlockChanged.InvokeAsync(block);
+                                                                                         })">
+                    Remove
+                </PureButton>
+            </div>
+        }
+        <div class="flex gap-2">
+            <PureInput @bind-Value="newItemText" Placeholder="Enter item text"/>
+            <PureButton Size="PureSize.Small" OnClick="AddListItem">Add</PureButton>
+        </div>
+    </div>
+}
+
+@code {
+    private bool isHovering;
+
+    private void OnHoverChanged(bool hovering)
+    {
+        isHovering = hovering;
+        Console.WriteLine($"Hover state: {isHovering}");
+    }
+
+    private RenderFragment MenuContent => builder =>
+    {
+        builder.OpenElement(0, "div");
+        builder.AddContent(1, "This is the popup menu content.");
+        builder.CloseElement();
+    };
+
+    private Pressable Pressable = new(Info);
+
+    private static RenderFragment Info = @<svg title="Text type only changes the HTML element, not the appearance."
+                                               xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"
+                                               fill="currentColor" class="size-4 text-gray-600">
+                                             <path fill-rule="evenodd"
+                                                   d="M15 8A7 7 0 1 1 1 8a7 7 0 0 1 14 0ZM9 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0ZM6.75 8a.75.75 0 0 0 0 1.5h.75v1.75a.75.75 0 0 0 1.5 0v-2.5A.75.75 0 0 0 8.25 8h-1.5Z"
+                                                   clip-rule="evenodd"/>
+                                         </svg>;
+
+    private List<string> textTypes = ["paragraph", "heading", "quote", "code"];
+    private bool advancedColorPicker = true;
+    private bool textColorPickerVisible = false;
+    private string textType { get; set; } = "paragraph";
+
+    protected override Task OnInitializedAsync()
+    {
+        UpdateFormatting();
+        return base.OnInitializedAsync();
+    }
+
+    protected override Task OnParametersSetAsync()
+    {
+        UpdateFormatting();
+        return base.OnParametersSetAsync();
+    }
+
+    private async Task UpdateBorderColor(string? v)
+    {
+        ArgumentNullException.ThrowIfNull(Formatting.Border);
+        Formatting.Border.Color = v;
+        await FormattingChanged.InvokeAsync(Formatting);
+    }
+
+    private void UpdateFormatting()
+    {
+        textType = Block.Tag switch
+        {
+            "p" => "paragraph",
+            "h1" => "heading",
+            "blockquote" => "quote",
+            "code" => "code",
+            _ => "paragraph"
+        };
+        FontSize = Formatting.FontSizeV2;
+        FontWeight = FontWeightsToDouble(FontWeightClassToEnum(Formatting.FontWeight ?? FontWeights.Normal.ToString()));
+        TextColor = TailwindTextColorTransformer.MapTailwindTextColorClassToEnum(Formatting.TextColor);
+        TextColorV2 = Formatting.TextColor ?? "#000000";
+        BackgroundColor = TailwindBackgroundColorMapper.MapTailwindBackgroundColorClassToEnum(Formatting.BackgroundColor);
+        FontFamily = Formatting.FontFamily switch
+        {
+            "font-mono" => BlockFontFamily.Mono.ToString(),
+            "font-sans" => BlockFontFamily.Sans.ToString(),
+            "font-serif" => BlockFontFamily.Serif.ToString(),
+            _ => BlockFontFamily.Sans.ToString()
+        };
+    }
+
+    private static double FontWeightsToDouble(FontWeights weights)
+    {
+        return weights switch
+        {
+            FontWeights.VeryBold => 900,
+            FontWeights.ExtraBold => 800,
+            FontWeights.Bold => 700,
+            FontWeights.SemiBold => 600,
+            FontWeights.Medium => 500,
+            FontWeights.Normal => 400,
+            FontWeights.Light => 300,
+            FontWeights.ExtraLight => 200,
+            FontWeights.Thin => 100,
+            _ => 400
+        };
+    }
+
+    private static FontWeights FontWeightClassToEnum(string fontWeight)
+    {
+        return fontWeight switch
+        {
+            "font-black" => FontWeights.VeryBold,
+            "font-extrabold" => FontWeights.ExtraBold,
+            "font-bold" => FontWeights.Bold,
+            "font-semibold" => FontWeights.SemiBold,
+            "font-medium" => FontWeights.Medium,
+            "font-normal" => FontWeights.Normal,
+            "font-light" => FontWeights.Light,
+            "font-extralight" => FontWeights.ExtraLight,
+            "font-thin" => FontWeights.Thin,
+            _ => FontWeights.Normal
+        };
+    }
+
+    private async Task TextColorChanged(TailwindColor color)
+    {
+        TextColor = color;
+        Formatting.TextColor = TailwindTextColorTransformer.MapEnumToTailwindTextColorClass(color);
+        await FormattingChanged.InvokeAsync(Formatting);
+    }
+
+    private async Task TextColorV2Changed(string color)
+    {
+        Formatting.TextColor = color;
+        await FormattingChanged.InvokeAsync(Formatting);
+    }
+
+    private async Task FontWeightChanged(double d)
+    {
+        var weight = (FontWeights)d;
+        Formatting.FontWeight = weight switch
+        {
+            FontWeights.VeryBold => "font-black",
+            FontWeights.ExtraBold => "font-extrabold",
+            FontWeights.Bold => "font-bold",
+            FontWeights.SemiBold => "font-semibold",
+            FontWeights.Medium => "font-medium",
+            FontWeights.Normal => "font-normal",
+            FontWeights.Light => "font-light",
+            FontWeights.ExtraLight => "font-extralight",
+            FontWeights.Thin => "font-thin",
+            _ => "font-normal"
+        };
+
+        await FormattingChanged.InvokeAsync(Formatting);
+    }
+
+    [Parameter, EditorRequired] public required PageBlock Block { get; set; }
+    [Parameter, EditorRequired] public required EventCallback<PageBlock> BlockChanged { get; set; }
+    [Parameter, EditorRequired] public required BlockFormatting Formatting { get; set; }
+    [Parameter, EditorRequired] public EventCallback<BlockFormatting> FormattingChanged { get; set; }
+
+    private async Task TextTypeChanged(string t)
+    {
+        var tag = t switch
+        {
+            "paragraph" => "p",
+            "heading" => "h1",
+            "quote" => "blockquote",
+            "code" => "code",
+            _ => "p"
+        };
+        var block = Block with { Tag = tag };
+        await BlockChanged.InvokeAsync(block);
+    }
+
+    private async Task FontFamilyChanged(int itemIndex)
+    {
+        var blockFontFamily = (BlockFontFamily)itemIndex;
+        FontFamily = blockFontFamily.ToString();
+
+        Formatting.FontFamily = blockFontFamily switch
+        {
+            BlockFontFamily.Mono => "font-mono",
+            BlockFontFamily.Sans => "font-sans",
+            BlockFontFamily.Serif => "font-serif",
+            _ => "font-sans"
+        };
+
+        await FormattingChanged.InvokeAsync(Formatting);
+    }
+
+    private async Task FontSizeChanged(string s)
+    {
+        if (double.TryParse(s, out var d))
+        {
+            // must be between 0 and 128 for REM
+            var newSize = Math.Clamp(d, 0, 128);
+            Formatting.FontSizeV2 = newSize;
+
+            await FormattingChanged.InvokeAsync(Formatting);
+        }
+        else
+        {
+            Formatting.FontSizeV2 = 1;
+            await FormattingChanged.InvokeAsync(Formatting);
+        }
+    }
+
+    private string FontSizeDisplay => (FontSize).ToString();
+    private string FontWeightDisplay => ((FontWeights)FontWeight).ToString();
+
+    private string FontFamily { get; set; } =
+        BlockFontFamily.Sans.ToString();
+
+    [Parameter] public double FontSize { get; set; } = (double)PureSize.Medium;
+
+    [Parameter] public double FontWeight { get; set; } = 400;
+
+    [Parameter] public string TextColorV2 { get; set; } = "#000000";
+
+    [Parameter] public TailwindColor TextColor { get; set; } = TailwindColor.Gray900;
+
+    [Parameter] public TailwindColor BackgroundColor { get; set; } = TailwindColor.White;
+
+    private string newItemText = string.Empty;
+
+    private void AddListItem()
+    {
+        if (!string.IsNullOrWhiteSpace(newItemText) && Block.BlockData is ListBlockData listBlockData)
+        {
+            listBlockData.Items.Add(new ListItem { Text = newItemText });
+            newItemText = string.Empty;
+
+            var block = Block with { BlockData = listBlockData };
+            BlockChanged.InvokeAsync(block);
+        }
+    }
+
+}

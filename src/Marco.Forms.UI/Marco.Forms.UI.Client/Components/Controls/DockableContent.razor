@@ -1,0 +1,38 @@
+@using Marco.Forms.UI.Client.Components.Properties
+<div
+    class="flex flex-col justify-between @ContainerClasses"
+    style="@ContainerStyles" @ref="ContentContainer">
+    @ChildContent
+    <PureButton Variant="PureVariant.Subtle" Size="PureSize.Small" Styles="mt-2" OnClick="() => IsDocked = !IsDocked">@(IsDocked ? "Undock" : "Dock") </PureButton>
+</div>
+@code {
+    private string ContainerClasses => IsDocked
+        ? "w-80 shrink-0 h-[calc(100vh-64px)] bg-gray-50 overflow-y-auto border-t-1 border-gray-200"
+        : $"bg-gray-50 shadow-md min-h-80 max-h-full min-w-48 max-w-96 overflow-y-auto rounded-xl outline-1 outline-gray-200 {ScrollbarStyles} fixed";
+
+    private string ContainerStyles => IsDocked
+        ? ""
+        : $"{GetPositionBasedOnAnchor()} z-index: 100;";
+    public bool IsDocked { get; set; } = true;
+    private const string ScrollbarStyles = "[&::-webkit-scrollbar]:[width:10px] [&::-webkit-scrollbar]:bg-gray-200 [&::-webkit-scrollbar]:border-r-1 [&::-webkit-scrollbar]:border-gray-300 [&::-webkit-scrollbar]:rounded-tr-xl [&::-webkit-scrollbar]:rounded-br-xl [&::-webkit-scrollbar-thumb]:rounded-tr-xl [&::-webkit-scrollbar-thumb]:rounded-br-xl [&::-webkit-scrollbar-thumb]:bg-gray-300";
+
+    [Parameter] public EventCallback OnClickCancel { get; set; }
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    [Parameter] public (double X, double Y) Position { get; set; }
+
+    [Parameter] public PositionAnchor PositionAnchor { get; set; }
+
+    private BoxPosition ContentAnchor { get; set; } = BoxPosition.TopLeft;
+    public ElementReference ContentContainer { get; private set; }
+
+    private string GetPositionBasedOnAnchor()
+    {
+        return PositionAnchor switch
+        {
+            PositionAnchor.End => $"top: {Position.Y}px; right: {Position.X}px; {ContentAnchor.GetTransformCSS()};",
+            _ => $"top: {Position.Y}px; left: {Position.X}px; {ContentAnchor.GetTransformCSS()};",
+        };
+    }
+}

@@ -1,0 +1,73 @@
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@using Marco.Forms.UI.Client.Models
+@if (Field != null || FieldJson != null)
+{
+    <div class="suggestion-preview relative max-h-96">
+        @if (Field != null)
+        {
+            <div class="border-1 border-gray-300 rounded-xl p-4">
+                <FormFieldRenderer Field="@Field"/>
+            </div>
+        }
+        else if (FieldJson != null)
+        {
+            <div class="overflow-x-scroll overflow-y-scroll">
+                <pre class="bg-secondary p-2 rounded-xl">
+                <code class="font-mono text-sm">
+                @FieldJson
+                </code>
+            </pre>
+            </div>
+        }
+        <Button style="position: absolute; top: 4px; right: 4px" Variant="Variants.Primary" Size="Sizes.Sm"
+                @onclick="OnAccept">Accept
+        </Button>
+        <Button style="position: absolute; top: 4px; right: 80px" Variant="Variants.Destructive" Size="Sizes.Sm"
+                @onclick="OnReject">Reject
+        </Button>
+    </div>
+}
+
+@code {
+    [Parameter] public FieldSchema? Field { get; set; }
+    [Parameter] public string? FieldJson { get; set; }
+    [Parameter] public EventCallback OnAccept { get; set; }
+    [Parameter] public EventCallback OnReject { get; set; }
+
+    private readonly JsonSerializerOptions jsonOptions = new JsonSerializerOptions
+    {
+        WriteIndented = true,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        AllowTrailingCommas = true,
+        UnmappedMemberHandling = JsonUnmappedMemberHandling.Skip,
+        ReadCommentHandling = JsonCommentHandling.Skip,
+        PropertyNameCaseInsensitive = true,
+        ReferenceHandler = ReferenceHandler.IgnoreCycles,
+    };
+
+    protected override void OnParametersSet()
+    {
+        if (FieldJson is not null)
+        {
+            try
+            {
+                var newFields = JsonSerializer.Deserialize<FieldSchema[]>(FieldJson, jsonOptions);
+                if (newFields == null || newFields.Length == 0) return;
+
+                foreach (var newField in newFields)
+                {
+                    newField.FormFieldId = Uuid.New();
+                }
+
+                Field = newFields[0];
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
+        }
+    }
+
+
+}

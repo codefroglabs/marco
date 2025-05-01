@@ -1,0 +1,45 @@
+@using Marco.Forms.UI.Client.Components.Properties
+<div @onclick="OnClickCancel" style="@(Visible ? "z-index: 99" : "")" class="fixed top-0 left-0 @(Visible ? "h-full w-full" : "") bg-transparent"></div>
+<div class="shadow-xl max-h-80 min-w-48 max-w-96 overflow-y-auto rounded-lg border-1 border-gray-200 @ScrollbarStyles  @(Visible ? "fixed" : "hidden")" style="@($"top: {position.Y}px; left: {position.X}px; {ContentAnchor.GetTransformCSS()}; z-index: 100;")" @ref="ContentContainer">
+    @ChildContent
+</div>
+
+
+@code {
+    private const string ScrollbarStyles = "[&::-webkit-scrollbar]:[width:10px] [&::-webkit-scrollbar]:bg-gray-200 [&::-webkit-scrollbar]:border-r-1 [&::-webkit-scrollbar]:border-gray-300 [&::-webkit-scrollbar]:rounded-tr-lg [&::-webkit-scrollbar]:rounded-br-lg [&::-webkit-scrollbar-thumb]:rounded-tr-lg [&::-webkit-scrollbar-thumb]:rounded-br-lg [&::-webkit-scrollbar-thumb]:bg-gray-300";
+    private bool Visible => WindowPositioner is not null;
+    private (double X, double Y) position => WindowPositioner?.GetPosition() ?? (0, 0);
+
+    [Parameter]
+    public EventCallback OnClickCancel{ get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+
+    [Parameter]
+    public IPositioner? WindowPositioner { get; set; } = null;
+
+    [Inject]
+    public required IJSRuntime JSRuntime { get; init; }
+
+    private BoxPosition ContentAnchor { get; set; } = BoxPosition.TopLeft;
+    public ElementReference ContentContainer { get; private set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var module = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "../js/offscreenUtil.js");
+            var isSelectorBottomOffscreen = await module.InvokeAsync<bool>("isBottomOffscreen", ContentContainer);
+            if (isSelectorBottomOffscreen)
+            {
+                ContentAnchor = BoxPosition.BottomLeft;
+                StateHasChanged();
+            }
+            await module.DisposeAsync(); // We only call it once, since blazor doesn't have a native way to check for resizing
+        }
+
+    }
+
+}

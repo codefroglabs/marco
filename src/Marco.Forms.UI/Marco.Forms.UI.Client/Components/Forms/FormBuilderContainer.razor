@@ -1,0 +1,53 @@
+@page "/form-builder"
+
+@inject IFormSuggestionService AIService
+
+<div class="flex flex-col h-full justify-between form-builder-container">
+    <FormEditor
+        SelectedPosition="@SelectedPosition"
+        FormSchema="@CurrentForm"
+        OnInsertField="@ShowStepByStepMode" />
+
+    @* <button @onclick="ToggleStepByStepMode"> *@
+    @*     @((IsStepByStepMode) ? "Exit Step-by-Step Mode" : "Enter Step-by-Step Mode") *@
+    @* </button> *@
+
+    @if (IsStepByStepMode)
+    {
+        <FormStepByStepWizard
+            SelectedPosition="@SelectedPosition"
+            FormSchema="@CurrentForm"
+            OnFieldAccepted="@OnFieldAccepted"
+            AIService="AIService" />
+    }
+</div>
+
+@code {
+    private FormSchema CurrentForm = new FormSchema();
+    private bool IsStepByStepMode = true;
+    private int SelectedPosition = 0;
+
+    private void ToggleStepByStepMode()
+    {
+        IsStepByStepMode = !IsStepByStepMode;
+    }
+
+    private void ShowStepByStepMode(int position)
+    {
+        // Called if user tries to insert field at a certain position
+        IsStepByStepMode = true;
+        SelectedPosition = position;
+        // Possibly store the position so the wizard knows where to insert
+    }
+
+    private void OnFieldAccepted((FieldSchema[] newField, int position) args)
+    {
+        var (newField, position) = args;
+        if (newField.Length == 0) return;
+        var last = Math.Max(0, CurrentForm.Fields.Count);
+
+        // todo: support surgical insertion
+        CurrentForm.Fields.InsertRange(last, newField);
+        // re-serialize to JSON if needed
+    }
+}

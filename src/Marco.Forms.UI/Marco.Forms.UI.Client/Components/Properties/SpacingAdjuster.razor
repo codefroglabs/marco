@@ -1,0 +1,108 @@
+<legend class="text-[10px] px-1 pt-2 font-bold uppercase text-gray-600">Spacing (rem)</legend>
+<div class="flex flex items-center gap-4">
+    <div class="grid grid-cols-4 items-center">
+        <div class="col-span-4 flex justify-center">
+            <input type="number" class="border-1 bg-white rounded border-gray-300 bg-white p-1 text-center w-11 mb-1"
+                   value="@values.Top" @onchange="n => ValueChange(values with { Top = InputObjToNum(n.Value) })"/>
+        </div>
+        <input type="number" class="border-1 bg-white  rounded border-gray-300 bg-white p-1 text-center w-11 mr-1"
+               value="@values.Left" @onchange="n => ValueChange(values with { Left = InputObjToNum(n.Value) })"/>
+        <div
+            class="col-span-2 p-3 border-1 rounded size-24 flex items-center justify-center cursor-pointer @(currentMode == "Margin" ? "bg-blue-100 border-brand-300" : "border-gray-300")"
+            @onclick="ToggleMode">
+            <div @onclick:stopPropagation="true" @onclick:preventDefault="true"
+                 class="cursor-pointer p-2 border-1 rounded size-16 flex items-center justify-center z-10 @(currentMode == "Padding" ? "bg-blue-100 border-brand-300" : "border-gray-300 bg-gray-100")"
+                 @onclick="ToggleMode">
+                <div class="bg-white m-2 border border-gray-300 size-6"></div>
+            </div>
+        </div>
+        <input type="number" class="border-1 bg-white rounded border-gray-300 bg-white p-1 text-center w-11 ml-1"
+               value="@values.Right" @onchange="n => ValueChange(values with { Right = InputObjToNum(n.Value) })"/>
+        <div class="col-span-4 flex justify-center">
+            <input type="number" class="border-1 bg-white  rounded border-gray-300 bg-white p-1 text-center w-11 mt-1 rounded"
+                   value="@values.Bottom" @onchange="n => ValueChange(values with { Bottom = InputObjToNum(n.Value) })"/>
+        </div>
+    </div>
+    <div>@currentMode</div>
+</div>
+
+@code {
+    [Parameter] public Spacing Margin { get; set; } = new();
+    [Parameter] public EventCallback<Spacing> MarginChanged { get; set; }
+
+    [Parameter] public Spacing Padding { get; set; } = new();
+    [Parameter] public EventCallback<Spacing> PaddingChanged { get; set; }
+
+    [Parameter] public CssUnit CssUnit { get; set; }
+
+    private string currentMode = "Padding";
+
+    private Spacing values = new(0, 0, 0, 0);
+    protected override void OnInitialized()
+    {
+        currentMode = "Padding";
+        values = Padding;
+    }
+
+    protected override void OnParametersSet()
+    {
+        UpdateValues();
+
+    }
+
+    private void UpdateValues()
+    {
+        values = currentMode == "Padding" ? Padding : Margin;
+    }
+
+    private void ToggleMode()
+    {
+        currentMode = currentMode == "Padding" ? "Margin" : "Padding";
+        UpdateValues();
+    }
+
+    private void PaddingMode()
+    {
+        currentMode = "Padding";
+    }
+
+    private void MarginMode()
+    {
+        currentMode = "Margin";
+    }
+
+    private async Task ChangePaddingAsync()
+    {
+        await PaddingChanged.InvokeAsync(values);
+    }
+
+    private async Task ChangeMarginAsync()
+    {
+        await MarginChanged.InvokeAsync(values);
+    }
+
+    private async Task ValueChange(Spacing v)
+    {
+        values = v;
+
+        if (currentMode == "Padding")
+        {
+            await ChangePaddingAsync();
+        }
+        else
+        {
+            await ChangeMarginAsync();
+        }
+    }
+
+    private static int InputObjToNum(object? o)
+    {
+        var str = (string?)o;
+        return InputStrToNum(str);
+    }
+
+    private static int InputStrToNum(string? val)
+    {
+        return string.IsNullOrWhiteSpace(val) ? 0 : int.Parse(val);
+    }
+}

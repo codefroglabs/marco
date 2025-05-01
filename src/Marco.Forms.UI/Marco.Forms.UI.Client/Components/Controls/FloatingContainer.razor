@@ -1,0 +1,86 @@
+@using Marco.Forms.UI.Client.Components.Properties
+@using Pure.Blazor.Components.Icons
+<button id="@ElementId"
+    class="grab-btn transition-transform duration-150 ease-linear w-6 h-6 hidden group-focus-within/page-block:block group-last/page-block:mb-0 absolute cursor-pointer group/insert-block border-t-2 border-b-2 border-l-2 border-r-2 bg-brand-700 border-brand-700 @(GetRounding()) @(Visible ? "scale-110 ring-2 ring-offset-1 ring-brand-700" : "")"
+        style="@GetBoxStyles() @(!Visible ? "z-index: 99;" : "z-index: 101;")"
+        @onclick="ToggleMenu">
+    <div class="relative flex justify-center text-sm">
+        <span class="transition-all duration-150 ease-in-out text-gray-200 hover:text-white text-sm @(WindowPositioner is not null ? "rotate-45" : "")">
+            @if (WindowPositioner is not null)
+            {
+                <span class="sr-only">Close</span>
+                <PureIcon Icon="PureIcons.IconPlus" Size="PureSize.Medium" />
+            }
+            else
+            {
+                @Icon
+            }
+        </span>
+    </div>
+</button>
+@if (WindowPositioner is not null)
+{
+    <FloatingContainerContent WindowPositioner="WindowPositioner" OnClickCancel="CancelAsync">
+        @ChildContent
+    </FloatingContainerContent>
+}
+
+@code {
+    private const string ScrollbarStyles = "[&::-webkit-scrollbar]:[width:10px] [&::-webkit-scrollbar]:bg-gray-200 [&::-webkit-scrollbar]:border-r-1 [&::-webkit-scrollbar]:border-gray-300 [&::-webkit-scrollbar]:rounded-tr-lg [&::-webkit-scrollbar]:rounded-br-lg [&::-webkit-scrollbar-thumb]:rounded-tr-lg [&::-webkit-scrollbar-thumb]:rounded-br-lg [&::-webkit-scrollbar-thumb]:bg-gray-300";
+    private bool Visible => WindowPositioner is not null;
+    private (double X, double Y) position => WindowPositioner?.GetPosition() ?? (0, 0);
+
+    [Parameter]
+    public string? ElementId { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    [Parameter]
+    public BoxPosition BoxPosition { get; set; } = BoxPosition.TopLeft;
+
+    [Parameter, EditorRequired] public required RenderFragment Icon { get; set; }
+    private IPositioner? WindowPositioner { get; set; } = null;
+
+    public void ToggleMenu(MouseEventArgs e)
+    {
+        WindowPositioner = WindowPositioner is null ? ScreenPositioner.New(e) : null;
+    }
+
+    public void CloseMenu()
+    {
+        WindowPositioner = null;
+    }
+
+    private Task CancelAsync()
+    {
+        WindowPositioner = null;
+        return Task.CompletedTask;
+    }
+
+    private string GetRounding()
+    {
+        if (WindowPositioner is not null)
+        {
+            return "rounded-full";
+        }
+
+        return BoxPosition switch
+        {
+            BoxPosition.MiddleLeft => "rounded-l",
+            BoxPosition.BottomCenter => "rounded-b",
+            _ => "rounded-t"
+        };
+    }
+    private string GetBoxStyles()
+    {
+        return BoxPosition switch
+        {
+            BoxPosition.TopCenter => "left: 50%; top:0; transform: translate(-50%, -100%);",
+            BoxPosition.MiddleLeft => "left: 0; top: 50%; transform: translate(-100%, -50%);",
+            BoxPosition.BottomCenter => "left: 50%; transform: translate(-50%, 0%);",
+            _ => "top: 0; left: 0;"
+        };
+    }
+
+}

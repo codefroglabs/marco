@@ -1,0 +1,13 @@
+﻿services:
+  marco.forms.ui:
+    image: marco.forms.ui
+    build:
+      context: .
+      dockerfile: Marco.Forms.UI/Marco.Forms.UI/Dockerfile
+
+  marco.forms.ui.client:
+    image: marco.forms.ui.client
+    build:
+      context: .
+      dockerfile: Marco.Forms.UI/Marco.Forms.UI.Client/Dockerfile
+

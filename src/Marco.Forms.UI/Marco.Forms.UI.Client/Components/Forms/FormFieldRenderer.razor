@@ -1,0 +1,80 @@
+@using Pure.Blazor.Components
+@using Marco.Forms.UI.Client.Components.Shared
+<DefaultErrorBoundary>
+    <ChildContent>
+        <div>
+            @* @if (Field.Type != FieldType.Checkbox) *@
+            @* { *@
+            @* // Don't render a legend for checkboxes, as they have their own label *@
+            <legend for="@Field.FormFieldId"
+                    class="text-[10px] pb-1 pt-2 font-bold uppercase text-gray-600">@Field.Name</legend>
+            @* } *@
+            @switch (Field.Type)
+            {
+                case FieldType.Text:
+                    <Input id="@Field.FormFieldId"
+                           required="@Field.Required"
+                           @bind-Value="Field.Value.TextValue"/>
+                    break;
+                case FieldType.TextArea:
+                    <MultilineInput id="@Field.FormFieldId"
+                                    required="@Field.Required"
+                                    @bind-Value="Field.Value.TextValue"/>
+                    break;
+
+                @* case FieldType.Email: *@
+                @*     <Input *@
+                @*            autocomplete="off" *@
+                @*            id="@Field.FormFieldId" *@
+                @*            required="@Field.Required" *@
+                @*            type="email" *@
+                @*            @bind-Value="Field.Value.TextValue"/> *@
+                @*     break; *@
+
+                case FieldType.Checkbox:
+                    <CheckboxField Field="Field"/>
+                    break;
+
+                case FieldType.Radio:
+                    <RadioBlock Field="Field"/>
+                    break;
+
+                case FieldType.Date:
+                    <Input
+                        autocomplete="off"
+                        id="@Field.FormFieldId"
+                        required="@Field.Required"
+                        type="date"
+                        @bind-Value="Field.Value.TextValue"/>
+                    break;
+
+                case FieldType.Time:
+                    <Input
+                        autocomplete="off"
+                        id="@Field.FormFieldId"
+                        required="@Field.Required"
+                        type="time"
+                        @bind-Value="Field.Value.TextValue"/>
+                    break;
+
+                case FieldType.DateTime:
+                    <Input
+                        autocomplete="off"
+                        id="@Field.FormFieldId"
+                        required="@Field.Required"
+                        type="datetime-local"
+                        @bind-Value="Field.Value.TextValue"/>
+                    break;
+                case FieldType.Select:
+                    <SelectBlock Field="Field"/>
+                    break;
+            }
+
+        </div>
+    </ChildContent>
+    <ErrorContent>Error rendering the field</ErrorContent>
+</DefaultErrorBoundary>
+
+@code {
+    [Parameter, EditorRequired] public required FieldSchema Field { get; set; }
+}

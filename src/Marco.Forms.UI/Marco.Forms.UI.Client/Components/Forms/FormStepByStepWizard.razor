@@ -1,0 +1,128 @@
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@using Marco.Forms.UI.Client.Models
+@inject AlertService AlertService
+
+<div class="flex flex-row justify-between items-end gap-4 max-h-96">
+    @* <label for="positionSelect">Position:</label> *@
+    @* <select id="positionSelect" @bind="SelectedPosition"> *@
+    @*     @for (int i = 0; i <= FormSchema.Fields.Count; i++) *@
+    @*     { *@
+    @*         <option value="@i">Insert at @i</option> *@
+    @*     } *@
+    @* </select> *@
+
+    <div class="w-1/2">
+        @* @foreach (var field in FormSchema.Fields) *@
+        @* { *@
+        @*     <div> *@
+        @*         <FormFieldRenderer Field="@field"/> *@
+        @*     </div> *@
+        @* } *@
+        <form @onsubmit="GenerateSuggestion" class="w-full">
+            <div class="flex flex-col sm:flex-row justify-between gap-4">
+                <div class="flex flex-col gap-0.5 w-full">
+                    <Input placeholder="Describe the field" id="fieldPrompt"
+                           @onkeydown="OnKeyDown"
+                           @onkeypress:preventDefault
+                           @bind-Value="FieldPrompt"></Input>
+                    <span class="text-gray-700 text-sm">Accept suggestion with shift + enter</span>
+                </div>
+                <Button Loading="loading" Variant="Variants.Primary" Size="Sizes.Lg">Generate</Button>
+            </div>
+        </form>
+    </div>
+    <div class="w-1/2">
+        @if (SuggestedField != null)
+        {
+            <SuggestionPreview
+                FieldJson="@SuggestedField"
+                OnAccept="@AcceptField"
+                OnReject="@RejectSuggestion"/>
+        }
+    </div>
+</div>
+
+@code {
+    private bool loading;
+    [Parameter, EditorRequired] public required FormSchema FormSchema { get; set; }
+    [Parameter] public EventCallback<(FieldSchema[], int)> OnFieldAccepted { get; set; }
+    [Parameter, EditorRequired] public required IFormSuggestionService AIService { get; set; }
+
+    private string? FieldPrompt { get; set; }
+    private string? SuggestedField { get; set; }
+
+    public async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        // if hit cmd+enter, accept suggestion
+        if (e is { MetaKey: true, Key: "Enter" })
+        {
+            await AcceptField();
+        }
+
+        // if hit ctrl+enter, accept suggestion
+        if (e is { CtrlKey: true, Key: "Enter" })
+        {
+            await AcceptField();
+        }
+
+        // if hit ctrl+enter, accept suggestion
+        if (e is { ShiftKey: true, Key: "Enter" })
+        {
+            await AcceptField();
+        }
+    }
+
+    [Parameter] public int SelectedPosition { get; set; }
+
+    private readonly JsonSerializerOptions jsonOptions = new JsonSerializerOptions
+    {
+        WriteIndented = true,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        AllowTrailingCommas = true,
+        UnmappedMemberHandling = JsonUnmappedMemberHandling.Skip,
+        ReadCommentHandling = JsonCommentHandling.Skip,
+        PropertyNameCaseInsensitive = true,
+        ReferenceHandler = ReferenceHandler.IgnoreCycles,
+    };
+
+    private async Task GenerateSuggestion()
+    {
+        if (string.IsNullOrWhiteSpace(FieldPrompt)) return;
+        loading = true;
+        SuggestedField = await AIService.GenerateFieldAsJsonAsync(FieldPrompt);
+        loading = false;
+    }
+
+    private async Task AcceptField()
+    {
+        try
+        {
+            if (SuggestedField == null) return;
+            var newFields = JsonSerializer.Deserialize<FieldSchema[]>(SuggestedField, jsonOptions);
+
+            if (newFields == null || newFields.Length == 0) return;
+
+            foreach (var newField in newFields)
+            {
+                newField.FormFieldId = Uuid.New();
+            }
+
+            await OnFieldAccepted.InvokeAsync((newFields, SelectedPosition));
+            // Reset for the next field
+            SuggestedField = null;
+            FieldPrompt = string.Empty;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            await AlertService.ShowAsync("Failed to accept field", Accent.Danger);
+        }
+    }
+
+    private void RejectSuggestion()
+    {
+        SuggestedField = null;
+    }
+
+}

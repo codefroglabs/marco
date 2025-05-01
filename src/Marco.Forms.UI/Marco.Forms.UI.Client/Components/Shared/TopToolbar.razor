@@ -1,0 +1,8 @@
+﻿<div class="mt-4 mb-2 flex justify-end gap-2">
+    @ChildContent
+</div>
+
+@code {
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+}

@@ -1,0 +1,57 @@
+@using System.Collections.Frozen
+@using Pure.Blazor.Components.Icons
+@if (blockTree is not null)
+{
+    @foreach (var (parentId, blocks) in blockTree)
+    {
+        <ul class="text-sm">
+            <li class="font-medium text-xs text-gray-500 flex gap-2 items-center pt-1 pb-0.5 hover:bg-gray-100 cursor-pointer" @onclick="() => OnBlockSelected(parentId)">
+                <div>
+                    <PureIcon Icon="PureIcons.IconMinus" Size="PureSize.Small" />
+                </div>
+                <div class="tracking-wide uppercase">@GetBlockLabel(parentId)</div>
+            </li>
+            @foreach (var block in blocks)
+            {
+                <li  @onclick="() => OnBlockSelected(block.BlockId)" class="ml-2 p-1 hover:bg-gray-100 cursor-pointer">@block.BlockLabel</li>
+            }
+        </ul>
+    }
+}
+else
+{
+    <p>Loading...</p>
+}
+
+@code {
+    [Parameter] public FrozenSet<PageBlock> Blocks { get; set; } = [];
+    [Parameter] public EventCallback<PageBlock> BlockSelected { get; set; }
+
+    private FrozenDictionary<string, List<PageBlock>>? blockTree;
+
+    protected override void OnInitialized()
+    {
+        // blocks are stored as a DAG, print the tree to the log grouped by parent
+        blockTree = Blocks
+            .Where(p => p.ParentBlockIds.Any())
+            .OrderBy(p => p.BlockPosition)
+            .GroupBy(p => p.ParentBlockIds?.FirstOrDefault())
+            .ToFrozenDictionary(p => p.Key ?? "", p => p.ToList());
+
+        // orders the parent blocks by their position in the tree
+        blockTree = blockTree
+            .OrderBy(p => Blocks.FirstOrDefault(b => b.BlockId == p.Key)?.BlockPosition)
+            .ToFrozenDictionary();
+    }
+
+    private string GetBlockLabel(string pageBlockId)
+    {
+        var block = Blocks.FirstOrDefault(b => b.BlockId == pageBlockId);
+        return block?.BlockLabel ?? block?.BlockType ?? pageBlockId;
+    }
+
+    private void OnBlockSelected(string blockId)
+    {
+        BlockSelected.InvokeAsync(Blocks.SingleOrDefault(p => p.BlockId == blockId));
+    }
+}

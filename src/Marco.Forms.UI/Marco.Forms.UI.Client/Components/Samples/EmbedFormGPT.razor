@@ -1,0 +1,30 @@
+@page "/FormGPT"
+@using Marco.Forms.UI.Client.Components.Forms
+@using Pure.Blazor.Components
+@rendermode InteractiveServer
+<div class="w-3/4 mx-auto">
+    <h3 class="text-2xl font-bold">Embedded FormGPT</h3>
+    <!-- Easily embed FormGPT in your app -->
+    <FormGPT OnComplete="NewForm" />
+    <!-- done! -->
+</div>
+<Sheet @bind-IsOpen="IsOpen">
+    <SheetContent>
+        @if (Form is not null)
+        {
+            <FormRenderer Form="Form"/>
+        }
+    </SheetContent>
+</Sheet>
+
+@code {
+    public bool IsOpen { get; set; }
+    public FormDto? Form { get; set; }
+
+    public void NewForm(FormDto form)
+    {
+        Form = form;
+        IsOpen = true;
+    }
+
+}

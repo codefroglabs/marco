@@ -1,0 +1,73 @@
+@using Marco.Forms.UI.Client.Components.Blocks
+@using Marco.Forms.UI.Client.Components.Primitives
+@using Marco.Forms.UI.Client.Models
+@using Pure.Blazor.Components
+<div class="p-1">
+    <PureLabel Size="PureSize.ExtraSmall">Background color</PureLabel>
+    <div class="flex items-center gap-2 rounded">
+        <button @onclick="() => BackgroundColorChanged(TailwindColor.Black)" class="w-8 h-8 cursor-pointer bg-black border-gray-300 border-1 rounded"></button>
+        <button @onclick="() => BackgroundColorChanged(TailwindColor.White)" class="w-8 h-8 cursor-pointer bg-white border-gray-300 border-1 rounded"></button>
+        <button @onclick="@(() => backgroundColorPickerVisible = !backgroundColorPickerVisible)" class="w-8 h-8 border-gray-300 border-1 rounded cursor-pointer bg-gradient-to-br from-red-600 to-blue-600"></button>
+        <span>@backgroundColor.ToString()</span>
+    </div>
+    @if (backgroundColorPickerVisible)
+    {
+        <div class="flex gap-2">
+            <div class="grid-cols-9 grid">
+                @foreach (var color in Enum.GetValues<TailwindColor>()
+                                  .Where(p =>
+                                      // exclude black/white/transparent
+                                      p.ToString().EndsWith("0") &&
+                                      // exclude the lowest and highest shades
+                                      // this is mostly a visual appearance thing and my skepticism on them being required
+                                      !p.ToString().EndsWith("50") && !p.ToString().EndsWith("950"))
+                                  // reverse the order to show the darkest shades first
+                                  .Reverse())
+                {
+                    <button @ondblclick="@(async () => { await BackgroundColorChanged(color); backgroundColorPickerVisible = false; })" @onclick="@(() => BackgroundColorChanged(color))" class="w-6 h-6 hover:scale-150 hover:shadow hover:rounded cursor-pointer @($"{TailwindBackgroundColorMapper.MapEnumToTailwindBackgroundColorClass(color)}")"></button>
+                }
+            </div>
+        </div>
+    }
+    <SpacingAdjuster Margin="Formatting.Margin" MarginChanged="MarginChanged" Padding="Formatting.Padding" PaddingChanged="PaddingChanged"/>
+</div>
+
+@code {
+    private bool backgroundColorPickerVisible = false;
+    [Parameter] public required BlockFormatting Formatting { get; set; }
+    [Parameter] public EventCallback<BlockFormatting?> FormattingChanged { get; set; }
+    private TailwindColor backgroundColor = TailwindColor.White;
+
+    private async Task BackgroundColorChanged(TailwindColor color)
+    {
+        backgroundColor = color;
+        Formatting.BackgroundColor = TailwindBackgroundColorMapper.MapEnumToTailwindBackgroundColorClass(color);
+        await FormattingChanged.InvokeAsync(Formatting);
+    }
+
+    private async Task PaddingChanged(Spacing padding)
+    {
+        Formatting.Padding = new ()
+        {
+            Bottom = padding.Bottom,
+            Left = padding.Left,
+            Right = padding.Right,
+            Top = padding.Top,
+            Unit = padding.Unit
+        };
+        await FormattingChanged.InvokeAsync(Formatting);
+    }
+
+    private async Task MarginChanged(Spacing spacing)
+    {
+        Formatting.Margin = new()
+        {
+            Bottom = spacing.Bottom,
+            Left = spacing.Left,
+            Right = spacing.Right,
+            Top = spacing.Top,
+            Unit = spacing.Unit
+        };
+        await FormattingChanged.InvokeAsync(Formatting);
+    }
+}

@@ -1,0 +1,74 @@
+@page "/forms/{formId}/responses"
+@using Marco.Forms.UI.Client.Components.Shared
+@using Microsoft.AspNetCore.Components.Sections
+@using Pure.Blazor.Components.Display
+@inject FormStore Store
+@rendermode InteractiveServer
+
+<FullPageComponent ShowEndColumn="false" ShowStartColumn="false">
+    <SectionContent SectionId="FullPageComponent.TopBarSection">
+        <AppBar>
+            <Actions>
+                <div class="mx-auto flex-1 flex items-center justify-end h-16 gap-4">
+                    <ProfileButton/>
+                </div>
+            </Actions>
+        </AppBar>
+    </SectionContent>
+    <PureCard>
+        <h2 class="text-2xl font-semibold">@selectedForm?.Name</h2>
+        <div class="p-2">
+            @if (selectedForm != null && selectedFormResponses.Any())
+            {
+                <table class="table-auto w-full">
+                    <thead>
+                    <tr>
+                        <th class="px-4 py-2">Field Name</th>
+                        <th class="px-4 py-2">Response</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    @foreach (var response in selectedFormResponses)
+                    {
+                        var field = selectedForm.Sections.SelectMany(s => s.Fields).FirstOrDefault(f => f.FormFieldId == response.FormFieldId);
+                        <tr>
+                            <td class="border px-4 py-2">@field?.Name</td>
+                            <td class="border px-4 py-2">@response.Value</td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            }
+            else if (selectedForm != null)
+            {
+                <div class="text-center flex flex-col items-center">
+                    <svg class="h-12" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--!Font Awesome Pro 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license (Commercial License) Copyright 2024 Fonticons, Inc.--><path class="fa-secondary" opacity=".4" d="M16 208l0 112 544 0 0-112c0-17.7-14.3-32-32-32l-48 0 0 48c0 35.3-28.7 64-64 64l-256 0c-35.3 0-64-28.7-64-64l0-48-48 0c-17.7 0-32 14.3-32 32zm0 128l0 128c0 17.7 14.3 32 32 32l480 0c17.7 0 32-14.3 32-32l0-128L16 336z"/><path class="fa-primary" d="M160 16c-8.8 0-16 7.2-16 16l0 192c0 8.8 7.2 16 16 16l256 0c8.8 0 16-7.2 16-16l0-192c0-8.8-7.2-16-16-16L160 16zM128 32c0-17.7 14.3-32 32-32L416 0c17.7 0 32 14.3 32 32l0 192c0 17.7-14.3 32-32 32l-256 0c-17.7 0-32-14.3-32-32l0-192zM48 160l48 0 0 16-48 0c-17.7 0-32 14.3-32 32l0 112 544 0 0-112c0-17.7-14.3-32-32-32l-48 0 0-16 48 0c26.5 0 48 21.5 48 48l0 112 0 8 0 8 0 128c0 26.5-21.5 48-48 48L48 512c-26.5 0-48-21.5-48-48L0 336l0-8 0-8L0 208c0-26.5 21.5-48 48-48zM560 336L16 336l0 128c0 17.7 14.3 32 32 32l480 0c17.7 0 32-14.3 32-32l0-128z"/></svg>
+                    <h3 class="mt-2 text-sm font-semibold text-gray-900">No responses yet!</h3>
+                    <p class="mt-1 text-sm text-gray-500"><a href="#">Share your form</a> to start collecting responses.
+                    </p>
+                </div>
+            }
+        </div>
+    </PureCard>
+</FullPageComponent>
+
+@code {
+    private List<FormDto>? forms;
+    private FormDto? selectedForm;
+    private List<FormResponse> selectedFormResponses = [];
+
+    [Parameter] public required string FormId { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        forms = await Store.GetFormsAsync();
+
+        selectedForm = forms.FirstOrDefault(f => f.FormId == FormId);
+        if (selectedForm != null)
+        {
+            var submissions = await Store.GetFormSubmissionsAsync(selectedForm.FormId);
+            selectedFormResponses = submissions.SelectMany(p => p.Responses).ToList();
+        }
+    }
+
+}

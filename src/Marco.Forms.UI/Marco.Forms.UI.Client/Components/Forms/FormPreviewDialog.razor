@@ -1,0 +1,37 @@
+@implements Microsoft.FluentUI.AspNetCore.Components.IDialogContentComponent<FormDto>
+<Header2>@Content.Name</Header2>
+@if (submitted)
+{
+    <p>Thank you! We've recorded your response.</p>
+}
+else
+{
+    <EditForm class="flex flex-col gap-2" Model="@Content" Enhance="true"
+              OnValidSubmit="@HandleValidSubmit" FormName="@Content.Name">
+        <DataAnnotationsValidator/>
+        <ValidationSummary/>
+
+        @foreach (var formSection in Content.Sections)
+        {
+            <h4 class="text-xs text-gray-700">@formSection.Name</h4>
+            @if (!string.IsNullOrEmpty(formSection.Description))
+            {
+                <p class="text-xs text-gray-700">@formSection.Description</p>
+            }
+
+            @foreach (var field in formSection.Fields)
+            {
+                <FormFieldRenderer Field="field" />
+            }
+        }
+
+        <Button Variant="Variants.Primary" Size="Sizes.Sm" type="submit">Submit</Button>
+    </EditForm>
+}
+@code {
+    bool submitted;
+    [Parameter]
+    public required FormDto Content { get; set; }
+
+    public void HandleValidSubmit(){}
+}

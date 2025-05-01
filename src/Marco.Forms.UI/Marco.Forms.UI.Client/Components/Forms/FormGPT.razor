@@ -1,0 +1,128 @@
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@using Mediator
+@using Microsoft.FluentUI.AspNetCore.Components
+@inject ILogger<FormAdminPage> logger
+@inject IServiceProvider ServiceProvider
+@inject IDialogService DialogService
+@rendermode InteractiveServer
+
+<div class="flex flex-row gap-1">
+    <Input placeholder="What form do you need?"
+           @bind-Value="jsonRequest"/>
+    <Button Variant="Variants.Primary" Size="Sizes.Lg" disabled="@generatingForm" @onclick="GenerateNewJson">Generate</Button>
+</div>
+@code {
+
+    [Parameter]
+    public EventCallback<FormDto> OnComplete { get; set; }
+
+    private string jsonRequest = "";
+    private bool newJson = false;
+    private bool generatingForm = false;
+    private ServerFormAiClient? aiClient = null;
+    private readonly JsonSerializerOptions jsonOptions = new JsonSerializerOptions
+    {
+
+        WriteIndented = true,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        AllowTrailingCommas = true,
+        UnmappedMemberHandling = JsonUnmappedMemberHandling.Skip,
+        ReadCommentHandling = JsonCommentHandling.Skip,
+        PropertyNameCaseInsensitive = true,
+        ReferenceHandler = ReferenceHandler.IgnoreCycles
+    };
+    protected override async Task OnInitializedAsync()
+    {
+        aiClient = new ServerFormAiClient();
+        await aiClient.ListenForFormRequestAsync(OnFormGenerated);
+    }
+    private async Task GenerateNewJson()
+    {
+        generatingForm = true;
+        logger.LogInformation("Generating new form: {0}", jsonRequest);
+        var request = jsonRequest;
+        newJson = false;
+        if (aiClient != null)
+        {
+            logger.LogInformation("Generating form with AI");
+            await aiClient.GenerateFormAsync(request);
+        }
+        else
+        {
+            logger.LogError("AiClient is null");
+            generatingForm = false;
+        }
+    }
+    private async Task OnFormGenerated(string? json, string? error)
+    {
+        generatingForm = false;
+        Console.WriteLine("Form generated: {0}, {1}", json, error);
+        if (json == null)
+        {
+            return;
+        }
+
+        try
+        {
+            DialogParameters parameters = new()
+            {
+                Title = $"Preview",
+                PrimaryAction = "Yes",
+                PrimaryActionEnabled = false,
+                SecondaryAction = "No",
+                Width = "500px",
+                TrapFocus = false,
+                Modal = true,
+                PreventScroll = true,
+            };
+
+            // if the json starts with ```json
+            // remove it
+            if (json.StartsWith("```json"))
+            {
+                json = json.Substring(7);
+            }
+
+            if (json.EndsWith("```"))
+            {
+                json = json.Substring(0, json.Length - 3);
+            }
+
+            var dto = JsonSerializer.Deserialize<FormDto>(json, jsonOptions);
+            if (dto is null)
+            {
+                Console.WriteLine("Failed to deserialize form");
+                return;
+            }
+
+            await OnComplete.InvokeAsync(dto);
+
+            // IDialogReference dialog = await DialogService.ShowDialogAsync<FormPreviewDialog>(dto, parameters);
+            // await dialog.Result;
+            // if (selectedForm != null)
+            // {
+            //         //var currentJson = JsonSerializer.Serialize(selectedForm, jsonOptions);
+            //         var form = JsonSerializer.Deserialize<Form>(json, jsonOptions);
+            //         //Probably need to hack it to keep some form elements the same
+            //         if (form != null)
+            //         {
+            //             form.FormId = selectedForm.FormId; // Otherwise it fails to update
+            //             await Store.UpdateFormAsync(form);
+            //         }
+            //         else
+            //         {
+            //             Console.WriteLine("Failed to deserialize form");
+            //             error = "Form failed to deserialize";
+            //         }
+            //
+            //     //TODO print error
+            // }
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
+        }
+    }
+}

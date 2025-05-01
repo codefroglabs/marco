@@ -1,0 +1,305 @@
+@page "/"
+@page "/forms"
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@using Microsoft.FluentUI.AspNetCore.Components
+@using DialogResult = Microsoft.FluentUI.AspNetCore.Components.DialogResult
+@using Marco.Forms.UI.Client.Components.Shared
+@using Microsoft.AspNetCore.Components.Sections
+@using Pure.Blazor.Components.Display
+@inject FormStore Store
+@inject ILogger<FormAdminPage> logger
+@inject IDialogService DialogService
+
+@rendermode InteractiveServer
+
+<FullPageComponent ShowEndColumn="false" ShowStartColumn="false">
+    <SectionContent SectionId="FullPageComponent.TopBarSection">
+        <AppBar>
+
+            <Actions>
+                <div class="mx-auto flex-1 flex items-center justify-end h-16 gap-4">
+                    <Button Variant="Variants.Primary" OnClick="@OpenNewForm" Size="Sizes.Sm">New form
+                    </Button>
+                    <ProfileButton/>
+                </div>
+            </Actions>
+        </AppBar>
+    </SectionContent>
+    <PureCard>
+        <h2 class="text-2xl font-semibold">Forms</h2>
+        <p class="text-sm text-gray-500">Manage forms and view submissions.</p>
+        <div class="p-2">
+            @if (forms == null)
+            {
+                <p>Loading forms...</p>
+            }
+            else
+            {
+                <div class="container mx-auto p-4">
+                    <div class="min-w-full">
+                        <div class="flex flex-row gap-1">
+                            <Input placeholder="What form do you need?"
+                                   @bind-Value="jsonRequest"/>
+                            <Button disabled="@generatingForm" Variant="Variants.Primary" Size="Sizes.Lg" @onclick="GenerateNewJson">Generate</Button>
+                        </div>
+                        <div class="grid grid-cols-6">
+                            <div scope="col"
+                                 class="col-span-2 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"></div>
+                            <div scope="col"
+                                 class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Responses
+                            </div>
+                            <div scope="col"
+                                 class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Completion
+                            </div>
+                            <div scope="col"
+                                 class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Updated
+                            </div>
+                            <div scope="col"
+                                 class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Integrations
+                            </div>
+                        </div>
+                        <div class="flex flex-col gap-2">
+                            @foreach (var form in forms)
+                            {
+                                <FormCard Form="@form"
+                                          OnClick="@(() => Nav.NavigateTo($"/forms/{form.FormId}/canvas"))"/>
+                            }
+                        </div>
+                    </div>
+
+                    @if (selectedForm != null && showResponses)
+                    {
+                        <h4 class="font-bold text-lg leading-6">Responses for @selectedForm.Name</h4>
+                    }
+                    @if (selectedForm != null && showResponses && selectedFormResponses.Any())
+                    {
+                        <table class="table-auto w-full">
+                            <thead>
+                            <tr>
+                                <th class="px-4 py-2">Field Name</th>
+                                <th class="px-4 py-2">Response</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            @foreach (var response in selectedFormResponses)
+                            {
+                                var field = selectedForm.Sections.SelectMany(s => s.Fields).FirstOrDefault(f => f.FormFieldId == response.FormFieldId);
+                                <tr>
+                                    <td class="border px-4 py-2">@field?.Name</td>
+                                    <td class="border px-4 py-2">@response.Value</td>
+                                </tr>
+                            }
+                            </tbody>
+                        </table>
+                    }
+                    else if (selectedForm != null && showResponses)
+                    {
+                        <div class="text-center flex flex-col items-center">
+                            <i class="fa-duotone fa-thin fa-box-ballot fa-2xl"></i>
+                            <h3 class="mt-2 text-sm font-semibold text-gray-900">No responses yet!</h3>
+                            <p class="mt-1 text-sm text-gray-500"><a href="#">Share your form</a> to start collecting
+                                responses.</p>
+                        </div>
+                    }
+                    @if (selectedForm != null && showJson)
+                    {
+                        <h4>JSON for @selectedForm.Name</h4>
+                        <textarea class="w-full h-96 border text-xs font-mono" @bind="editableJson"></textarea>
+                        <PureButton @onclick=SaveJson Variant="PureVariant.Default" Accent="Accent.Brand">Save</PureButton>
+                    }
+                </div>
+            }
+        </div>
+    </PureCard>
+</FullPageComponent>
+
+<Sheet IsOpen="ShowFormFlyout">
+    <SheetContent>
+        <NewFormComponent OnComplete="() => ShowFormFlyout = false"/>
+    </SheetContent>
+</Sheet>
+
+@code {
+    private bool open2;
+    [Inject] public required NavigationManager Nav { get; set; }
+
+    private bool ShowFormFlyout { get; set; }
+    private List<FormDto>? forms;
+    private FormDto? selectedForm;
+    private List<FormResponse> selectedFormResponses = [];
+    private bool showResponses;
+    private bool showJson;
+    private string editableJson = string.Empty;
+    private readonly JsonSerializerOptions jsonOptions = new JsonSerializerOptions
+    {
+
+        WriteIndented = true,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        AllowTrailingCommas = true,
+        UnmappedMemberHandling = JsonUnmappedMemberHandling.Skip,
+        ReadCommentHandling = JsonCommentHandling.Skip,
+        PropertyNameCaseInsensitive = true,
+        ReferenceHandler = ReferenceHandler.IgnoreCycles
+    };
+
+
+    private ServerFormAiClient? aiClient = null;
+    private string jsonRequest = "";
+    private bool newJson = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        aiClient = new ServerFormAiClient();
+        await aiClient.ListenForFormRequestAsync(OnFormGenerated);
+
+        forms = await Store.GetFormsAsync();
+    }
+
+    private async Task ViewResponses(string formId)
+    {
+        if (forms is null)
+        {
+            return;
+        }
+
+        selectedForm = forms.FirstOrDefault(f => f.FormId == formId);
+        if (selectedForm != null)
+        {
+            var submissions = await Store.GetFormSubmissionsAsync(formId);
+            selectedFormResponses = submissions.SelectMany(s => s.Responses).ToList();
+            showResponses = true;
+            showJson = false;
+        }
+    }
+
+    private void EditForm(FormDto form)
+    {
+        selectedForm = form;
+        editableJson = JsonSerializer.Serialize(selectedForm, jsonOptions);
+        showResponses = false;
+        showJson = true;
+    }
+
+    private async Task SaveJson()
+    {
+        if (selectedForm != null)
+        {
+            var updatedJson = JsonSerializer.Deserialize<Form>(editableJson, jsonOptions);
+            if (updatedJson == null)
+            {
+                // todo: show error message
+                return;
+            }
+
+            await Store.UpdateFormAsync(updatedJson);
+        }
+    }
+
+    private async Task OnFormGenerated(string? json, string? error)
+    {
+        generatingForm = false;
+        Console.WriteLine("Form generated: {0}, {1}", json, error);
+        if (json == null)
+        {
+            return;
+        }
+
+        try
+        {
+            DialogParameters parameters = new()
+            {
+                Title = $"Preview",
+                PrimaryAction = "Yes",
+                PrimaryActionEnabled = false,
+                SecondaryAction = "No",
+                Width = "500px",
+                TrapFocus = false,
+                Modal = true,
+                PreventScroll = true,
+            };
+
+            // if the json starts with ```json
+            // remove it
+            if (json.StartsWith("```json"))
+            {
+                json = json.Substring(7);
+            }
+
+            if (json.EndsWith("```"))
+            {
+                json = json.Substring(0, json.Length - 3);
+            }
+
+            var dto = JsonSerializer.Deserialize<FormDto>(json, jsonOptions);
+            if (dto is null)
+            {
+                Console.WriteLine("Failed to deserialize form");
+                return;
+            }
+
+            IDialogReference dialog = await DialogService.ShowDialogAsync<FormPreviewDialog>(dto, parameters);
+            DialogResult? result = await dialog.Result;
+            // if (selectedForm != null)
+            // {
+            //         //var currentJson = JsonSerializer.Serialize(selectedForm, jsonOptions);
+            //         var form = JsonSerializer.Deserialize<Form>(json, jsonOptions);
+            //         //Probably need to hack it to keep some form elements the same
+            //         if (form != null)
+            //         {
+            //             form.FormId = selectedForm.FormId; // Otherwise it fails to update
+            //             await Store.UpdateFormAsync(form);
+            //         }
+            //         else
+            //         {
+            //             Console.WriteLine("Failed to deserialize form");
+            //             error = "Form failed to deserialize";
+            //         }
+            //
+            //     //TODO print error
+            // }
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
+        }
+    }
+
+    private bool generatingForm = false;
+
+    private async Task GenerateNewJson()
+    {
+        generatingForm = true;
+        logger.LogInformation("Generating new form: {0}", jsonRequest);
+        var request = jsonRequest;
+        newJson = false;
+        if (aiClient != null)
+        {
+            logger.LogInformation("Generating form with AI");
+            await aiClient.GenerateFormAsync(request);
+        }
+        else
+        {
+            logger.LogError("AiClient is null");
+            generatingForm = false;
+        }
+    }
+
+    private Task OpenNewForm()
+    {
+        ShowFormFlyout = true;
+        return Task.CompletedTask;
+    }
+
+    private async Task GenerateLink(Form form)
+    {
+        form.PublicLink = await Store.GeneratePublicLinkAsync(form.FormId);
+        StateHasChanged();
+    }
+
+}

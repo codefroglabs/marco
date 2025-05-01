@@ -1,0 +1,30 @@
+@using Pure.Blazor.Components
+<FlexRow Styles="px-2 divide-x-1 divide-gray-200 items-center">
+    <a href="/" class="px-4 h-16 flex items-center">
+        <svg width="44" height="34" viewBox="0 0 44 34" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path
+                d="M11.4843 27.2726C17.155 27.2726 21.165 23.1486 21.165 17.2535C21.165 11.4315 17.155 7.26953 11.4843 7.26953C8.738 7.26953 6.39153 8.24572 4.69296 9.94674L4.08007 7.77516H0V34.0007H5.48971V25.2822C7.07737 26.5478 9.13784 27.2726 11.4843 27.2726ZM5.27082 17.2506C5.27082 14.1759 7.43927 11.9693 10.5066 11.9693C13.6119 11.9693 15.7453 14.1759 15.7453 17.2506C15.7453 20.3604 13.6148 22.532 10.5066 22.532C7.43927 22.532 5.27082 20.3633 5.27082 17.2506Z"
+                fill="#015486"/>
+            <path
+                d="M34.1523 27.2719C39.8229 27.2719 43.833 23.1479 43.833 17.2528C43.833 11.4307 39.8229 7.2688 34.1523 7.2688C31.8058 7.2688 29.7453 7.99363 28.1577 9.25917V0H22.665V26.7662H26.748L27.3609 24.5947C29.0595 26.2957 31.406 27.2719 34.1523 27.2719ZM27.9388 17.2499C27.9388 14.1752 30.1072 11.9685 33.1775 11.9685C36.2828 11.9685 38.4133 14.1752 38.4133 17.2499C38.4133 20.3596 36.2828 22.5312 33.1775 22.5312C30.1072 22.5312 27.9388 20.3626 27.9388 17.2499Z"
+                fill="#3B3B3C"/>
+        </svg>
+        <span class="sr-only">Home</span>
+    </a>
+    <div class="flex">
+        <PureNavLink href="/forms" Match="NavLinkMatch.All"
+                     ActiveClass="font-medium text-sm text-brand-800 hover:text-brand-900 px-4 h-16 flex items-center border-b-2 border-brand-900 hover:border-brand-900"
+                     InactiveClass="font-medium text-sm text-brand-800 hover:text-brand-900 px-4 h-16 flex items-center border-b-2 border-transparent hover:border-brand-900">
+            Forms
+        </PureNavLink>
+    </div>
+
+    @if (Actions is not null)
+    {
+        @Actions
+    }
+</FlexRow>
+
+@code {
+    [Parameter] public RenderFragment? Actions { get; set; }
+}

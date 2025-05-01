@@ -1,0 +1,44 @@
+@page "/forms/{FormId}/canvas"
+@using Marco.Forms.UI.Client.Components.Shared
+@using Microsoft.AspNetCore.Components.Sections
+@using Pure.Blazor.Components.Display
+@inject FormStore Store
+
+<FullPageComponent ShowEndColumn="false" ShowStartColumn="false">
+    <SectionContent SectionId="FullPageComponent.TopBarSection">
+        <AppBar>
+            <Actions>
+                <div class="mx-auto flex-1 flex items-center justify-end h-16 gap-4">
+                    <ProfileButton/>
+                </div>
+            </Actions>
+        </AppBar>
+    </SectionContent>
+    <PureCard>
+        @if (form is null)
+        {
+            <p>Loading form...</p>
+        }
+        else
+        {
+            <h2 class="text-2xl font-semibold">@form.Name</h2>
+            <p class="text-sm text-gray-500">Manage form sections and fields.</p>
+            <NewFormComponent Form="form"/>
+        }
+    </PureCard>
+</FullPageComponent>
+
+@code {
+    public FormDto? form { get; set; }
+    [Parameter] public string? FormId { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (FormId is not null)
+        {
+            var forms = await Store.GetFormsAsync();
+            form = forms.FirstOrDefault(f => f.FormId == FormId) ?? new();
+        }
+    }
+
+}

@@ -1,0 +1,193 @@
+@using System.Text.Json
+@using Marco.Forms.UI.Client.Components.Actions
+@using Marco.Forms.UI.Client.Components.Blocks
+@using Marco.Forms.UI.Client.Components.Shared
+@using Marco.Forms.UI.Client.Models
+<div id="@ElementId" class="group/page-block w-fit hover:outline-1 hover:outline-dotted hover:outline-brand-700">
+    <ResizableContainer
+        Enabled="CanvasState.SelectedBlock?.BlockId == Block.BlockId">
+        <DefaultErrorBoundary>
+            <ChildContent>
+                <BlockRenderer2
+                    SiteId="@SiteId"
+                    Block="Block"
+                    BlockChanged="BlockChanged"
+                    BlockSelected="BlockSelectionChanged"
+                    CanvasState="CanvasState"
+                    CanvasStateChanged="CanvasStateChanged"
+                    EditorAction="OnEditorAction"/>
+            </ChildContent>
+            <ErrorContent>
+                <p>Something went wrong rendering this block.</p>
+            </ErrorContent>
+        </DefaultErrorBoundary>
+        @if (CanvasState.SelectedBlock?.BlockId == Block.BlockId)
+        {
+            <div
+                style="position: absolute; top: 50%; @(Block.Formatting?.Padding?.Left != 0 ? $"margin-left: {Block.Formatting?.Padding?.Left}{Block.Formatting?.Padding?.Unit.ToCssString()}" : "")">
+                <BlockEditContainer Block="Block" ActionSelected="OnBlockAction"/>
+            </div>
+        }
+    </ResizableContainer>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public required string SiteId { get; set; }
+    [Parameter, EditorRequired] public required PageBlock Block { get; set; }
+    [Parameter, EditorRequired] public required MarcoCanvasState CanvasState { get; set; }
+    [Parameter, EditorRequired] public required EventCallback<MarcoCanvasState> CanvasStateChanged { get; set; }
+    protected virtual string ElementId => GetElementId();
+    private IJSObjectReference? javascript;
+    private DotNetObjectReference<BlockController>? reference;
+
+    private string GetElementId() => $"blkctl-{Block.BlockId}";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                reference = DotNetObjectReference.Create(this);
+                javascript = await jsRuntime.InvokeAsync<IJSObjectReference>("import", "../js/blocks.js");
+                await javascript.InvokeVoidAsync("setupEditor", reference, ElementId);
+            }
+            catch (Exception e)
+            {
+                logger.LogError(e, "Failed to initialize block controller for {@block}", Block);
+            }
+        }
+    }
+
+    /// <summary>
+    ///     Positioner for the control menu (manipulate specific block)
+    /// </summary>
+    private IPositioner? ControlWindowPositioner { get; set; }
+
+    private async Task BlockChanged(PageBlock obj)
+    {
+        logger.LogTrace("Calling BlockChanged: {BlockId}", obj.BlockId);
+
+        var viewModel = CanvasState.Blocks.FirstOrDefault(p => p.BlockId == obj.BlockId);
+        if (viewModel is null)
+        {
+            logger.LogDebug("Failed to save: viewModel not found!");
+            return;
+        }
+
+        CanvasState.Sync(obj);
+        await CanvasStateChanged.InvokeAsync(CanvasState);
+    }
+
+    private async Task BlockSelectionChanged(PageBlock? block)
+    {
+        CanvasState.SelectedBlock = block;
+        await CanvasStateChanged.InvokeAsync(CanvasState);
+    }
+
+    private async Task OnBlockAction(BlockAction action)
+    {
+        var jsonOptions = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, WriteIndented = true };
+        var block = CanvasState.Blocks.FirstOrDefault(p => p.BlockId == action.BlockId);
+        if (block is null)
+        {
+            return;
+        }
+        switch (action)
+        {
+            case DebugBlockAction:
+                await dialogService.ShowDialogAsync($"Debug Block {block.BlockId}", b =>
+                {
+                    b.OpenElement(0, "pre");
+                    b.AddAttribute(1, "class", "bg-gray-800 flex overflow-auto rounded-b-lg text-sm leading-[1.5714285714] text-white sm:rounded-t-lg language-html");
+                    b.OpenElement(5, "code");
+                    b.AddAttribute(6, "class", "language-json p-4");
+                    b.AddContent(10, JsonSerializer.Serialize(block, jsonOptions));
+                    b.CloseElement();
+                    b.CloseElement();
+                });
+                break;
+            case InsertBlockAction insertBlockAction:
+            {
+                var placeAfter = CanvasState.Blocks.FirstOrDefault(p => p.BlockId == insertBlockAction.BlockId);
+
+                // get the parent block section for the new block
+                var parentBlock = CanvasState.Blocks.FirstOrDefault(p => p.BlockId == placeAfter?.ParentBlockIds?.FirstOrDefault());
+                CanvasState.AddBlockDefinitionAtRelativePosition(insertBlockAction.BlockDefinition, parentBlock?.BlockId, placeAfter);
+                break;
+            }
+            case EditBlockAction:
+                StateHasChanged();
+                break;
+            case DeleteBlockAction:
+            {
+                CanvasState.RemoveBlock(action.BlockId);
+                break;
+            }
+            case MoveUpAction:
+                CanvasState.MoveBlockUp(block.BlockId);
+
+                await InvokeAsync(StateHasChanged);
+                break;
+            case MoveDownAction:
+                CanvasState.MoveBlockDown(block.BlockId);
+
+                await InvokeAsync(StateHasChanged);
+                break;
+            case MoveAction:
+                await dialogService.ShowDialogAsync("Move block", b =>
+                {
+                    b.OpenComponent<MoveBlockDialog>(0);
+                    b.AddAttribute(1, "Block", block);
+                    b.AddAttribute(2, "CanvasState", CanvasState);
+                    b.AddAttribute(3, "CanvasStateChanged", EventCallback.Factory.Create<MarcoCanvasState>(this, CanvasStateChanged));
+                    b.CloseComponent();
+                });
+                break;
+        }
+
+        ControlWindowPositioner = null;
+    }
+
+    [JSInvokable]
+    public Task OnFocusOut()
+    {
+        return Task.CompletedTask;
+    }
+
+    [JSInvokable]
+    public async Task OnFocusIn()
+    {
+        if (javascript is null)
+        {
+            return;
+        }
+
+        await javascript.InvokeVoidAsync("enableResizing", reference, ElementId);
+    }
+
+    [JSInvokable]
+    public Task OnResize(double width, double height)
+    {
+        return Task.CompletedTask;
+    }
+
+    [JSInvokable]
+    public Task OnMouseUp(double x, double y)
+    {
+        return Task.CompletedTask;
+    }
+
+    [JSInvokable]
+    public Task OnMouseDown(double x, double y)
+    {
+        return Task.CompletedTask;
+    }
+
+    [JSInvokable]
+    public Task OnMove(double x, double y)
+    {
+        return Task.CompletedTask;
+    }
+
+}

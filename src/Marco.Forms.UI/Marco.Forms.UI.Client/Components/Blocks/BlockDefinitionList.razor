@@ -1,0 +1,86 @@
+@using System.Collections.Frozen
+@using Marco.Forms.UI.Client.Models
+@using Pure.Blazor.Components
+<ul>
+    <li class="font-medium text-xs text-gray-500 flex gap-2 items-center pt-1 pb-0.5">
+        <div>
+            <svg width="12" height="13" viewBox="0 0 12 13" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M11.1429 3.89997L6.00003 0.866638L0.857178 3.89997M11.1429 3.89997L6.00003 6.9333M11.1429 3.89997V9.09997L6.00003 12.1333M0.857178 3.89997L6.00003 6.9333M0.857178 3.89997V9.09997L6.00003 12.1333M6.00003 6.9333V12.1333" stroke="#9CA3AF" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </div>
+        <div class="tracking-wide uppercase">@GroupName</div>
+    </li>
+    @foreach (var blockDef in Blocks)
+    {
+        <li @onclick="async () => { await SelectBlockAsync(blockDef); }" tabindex="-1" class="flex gap-2 hover:bg-gray-100 p-2 cursor-pointer @(FocusedBlockId == blockDef.Id ? "bg-gray-100" : "bg-transparent")">
+            <div class="w-12 h-12 bg-white rounded-lg flex border-1 border-gray-300 items-center justify-center">
+                @((MarkupString)blockDef.Icon)
+            </div>
+            <div class="flex flex-col">
+                <div class="text-xs font-medium">@blockDef.Name</div>
+                <div class="text-xs text-gray-600">@blockDef.Description</div>
+            </div>
+        </li>
+    }
+    @if (Blocks.Count == 0)
+    {
+        <li class="text-xs text-gray-500 p-2">No blocks found</li>
+    }
+</ul>
+
+@code {
+    private string? FocusedBlockId { get; set; }
+
+    [Parameter] public string GroupName { get; set; } = "Blocks";
+
+    [Parameter] public FrozenSet<BlockDefinition> Blocks { get; set; } = [];
+    [Parameter] public EventCallback<BlockDefinition> OnBlockSelected { get; set; }
+
+    private async Task SelectBlockAsync(BlockDefinition blockDefinition)
+    {
+        await OnBlockSelected.InvokeAsync(blockDefinition);
+    }
+
+    private async Task OnArrowKey(KeyboardDirection direction)
+    {
+        var task = direction switch
+        {
+            KeyboardDirection.Down => MoveDownAsync(),
+            KeyboardDirection.Up => MoveUpAsync(),
+            _ => Task.CompletedTask
+        };
+
+        await task;
+    }
+
+    private Task MoveDownAsync()
+    {
+        if (FocusedBlockId is null)
+        {
+            // Focus on the first block
+            FocusedBlockId = Blocks.FirstOrDefault()?.Id;
+            return Task.CompletedTask;
+        }
+
+        // Focus on the next block, if found. otherwise, stay on the current block.
+        FocusedBlockId = Blocks.SkipWhile(b => b.Id != FocusedBlockId).Skip(1).FirstOrDefault()?.Id ?? FocusedBlockId;
+
+        return Task.CompletedTask;
+    }
+
+    private Task MoveUpAsync()
+    {
+        if (FocusedBlockId is null)
+        {
+            // Focus on the first block
+            FocusedBlockId = Blocks.FirstOrDefault()?.Id;
+            return Task.CompletedTask;
+        }
+
+        // Focus on the previous block, if found. otherwise, stay on the current block.
+        FocusedBlockId = Blocks.TakeWhile(b => b.Id != FocusedBlockId).LastOrDefault()?.Id ?? FocusedBlockId;
+
+        return Task.CompletedTask;
+    }
+
+}

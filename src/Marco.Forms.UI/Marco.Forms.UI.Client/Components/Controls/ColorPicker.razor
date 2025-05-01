@@ -1,0 +1,17 @@
+<input type="color" @bind="Color" @oninput="OnColorChanged"/>
+
+<p>Selected Color: @Color</p>
+
+@code {
+    [Parameter]
+    public string Color { get; set; } = "#000000";
+
+    [Parameter]
+    public EventCallback<string> ColorChanged { get; set; }
+
+    private async Task OnColorChanged(ChangeEventArgs e)
+    {
+        Color = e.Value?.ToString() ?? "#000000";
+        await ColorChanged.InvokeAsync(Color);
+    }
+}

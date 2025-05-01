@@ -1,0 +1,56 @@
+@using Marco.Forms.UI.Client.Models
+@namespace Marco.Forms.UI.Client.Components.Forms
+
+<EditForm class="flex flex-col gap-2" Model="@Form" Enhance="true"
+          OnValidSubmit="@HandleValidSubmit" FormName="@Form.Name">
+    <DataAnnotationsValidator/>
+    <ValidationSummary/>
+
+    @foreach (var formSection in Form.Sections)
+    {
+        <h4 class="text-xs text-gray-700">@formSection.Name</h4>
+        @if (!string.IsNullOrEmpty(formSection.Description))
+        {
+            <p class="text-sm text-gray-800">@formSection.Description</p>
+        }
+
+        @foreach (var field in formSection.Fields)
+        {
+            <FormFieldRenderer Field="field"/>
+        }
+    }
+
+    <Button Variant="Variants.Primary" Size="Sizes.Sm" type="submit">Submit</Button>
+</EditForm>
+
+@code {
+    bool submitted;
+    [Inject] public required FormStore Store { get; set; }
+
+    [Parameter] public required FormDto Form { get; set; }
+
+    private void HandleValidSubmit()
+    {
+        var formSubmissionId = Uuid.New();
+        var submission = new FormSubmission(formSubmissionId, Form.FormId, Uuid.New())
+        {
+            Responses = []
+        };
+
+        // add all the responses to the submission
+        foreach (var formSection in Form.Sections)
+        {
+            foreach (var q in formSection.Fields)
+            {
+                submission.Responses.Add(new FormResponse(Uuid.New(), formSubmissionId, q.FormFieldId!)
+                {
+                    Value = q.Value
+                });
+            }
+        }
+
+        Store.RecordSubmission(submission);
+        submitted = true;
+    }
+
+}

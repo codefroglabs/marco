@@ -1,0 +1,57 @@
+<div class="flex flex-col gap-2">
+    @* <label class="form-check-label text-sm font-medium text-gray-700 px-2">@Field.Name</label> *@
+    <div class="flex flex-wrap gap-2">
+        @foreach (var option in Field.Options)
+        {
+            var o = option;
+            <div class="text-xs text-gray-500 flex gap-2 p-2 text-md">
+                <button
+                    type="button"
+                    role="checkbox"
+                    aria-checked="@option.Value.BooleanValue"
+                    data-state="@(option.Value.BooleanValue == true ? "checked" : "unchecked")"
+                    class="
+                        peer h-4 w-4 shrink-0 rounded-sm border border-primary shadow focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
+                    @onclick="@(() => Toggle(o))">
+                    @if (option.Value.BooleanValue == true)
+                    {
+                        <span data-state="checked" class="flex items-center justify-center text-current"
+                              style="pointer-events: none;"><svg xmlns="http://www.w3.org/2000/svg" width="24"
+                                                                 height="24" viewBox="0 0 24 24" fill="none"
+                                                                 stroke="currentColor" stroke-width="2"
+                                                                 stroke-linecap="round" stroke-linejoin="round"
+                                                                 class="lucide lucide-check h-4 w-4"><path
+                                    d="M20 6 9 17l-5-5"></path></svg></span>
+                    }
+                </button>
+                @* <button type="button" role="checkbox" data-state="@(option.Value.BooleanValue == true ? "checked" : "unchecked")" aria-checked="@(option.Value.BooleanValue == true ? "true" : "false")" *@
+                @*         value="@(option.Value.BooleanValue == true ? "on" : "off")" *@
+                @*         class="peer h-4 w-4 shrink-0 rounded-sm border border-primary shadow focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground" *@
+                @*         id="@($"Field.FormFieldId_{option.Label}")" *@
+                @*         @onclick="_ => Toggle(option)"></button> *@
+                @* <input class="form-check-input" *@
+                @*        type="checkbox" *@
+                @*        id="@($"Field.FormFieldId_{option.Label}")" *@
+                @*        name="@($"Field.FormFieldId_{option.Label}")" *@
+                @*        @bind="@option.Value.BooleanValue"/> *@
+
+                <label class="form-check-label text-sm font-medium text-gray-700 px-2"
+                       for="@option.Label">@option.Label</label>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public required FieldSchema Field { get; set; }
+
+    private void Toggle(FormFieldOption option)
+    {
+        var oldValue = option.Value.BooleanValue ?? false;
+        var newValue = !oldValue;
+        Console.WriteLine("Toggling option " + option.Label + " from " + oldValue + " to " + newValue);
+        option.Value.BooleanValue = newValue;
+        StateHasChanged();
+    }
+
+}

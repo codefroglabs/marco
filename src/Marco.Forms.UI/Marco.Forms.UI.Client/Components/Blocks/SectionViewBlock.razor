@@ -1,0 +1,26 @@
+@using Marco.Forms.UI.Client.Models
+@using Marco.Forms.UI.Client.Components.Shared
+@inherits BlockComponentBase<Marco.Forms.UI.Client.Models.SectionBlockData>
+
+<div class="@Block.Layout?.ToCssClass() @Block.Formatting?.ToCssClass() " style="@Block.Formatting?.ToCssStyle() @Block.Layout?.GridLayoutOptions.GetGridCssStyle()">
+    @foreach (var block in PageBlocks.OrderBy(p => p.BlockPosition))
+    {
+        <DefaultErrorBoundary>
+            <ChildContent>
+        <BlockRenderer2 SiteId="@SiteId" Block="block"></BlockRenderer2>
+            </ChildContent>
+            <ErrorContent>
+                <p>An error occurred while loading the block</p>
+            </ErrorContent>
+        </DefaultErrorBoundary>
+    }
+    @if (!PageBlocks.Any() && !HasError)
+    {
+        <!-- Empty section, set tabindex to -1 to make the block focusable -->
+        <p tabindex="-1" class="text-sm text-gray-700">Empty section</p>
+    }
+    else if (HasError)
+    {
+        <p tabindex="-1">An error occurred while loading the section</p>
+    }
+</div>

@@ -1,0 +1,32 @@
+@implements IDisposable
+
+@code {
+    [CascadingParameter] public Wizard? ParentWizard { get; set; }
+
+    /// <summary>
+    /// The title of the step
+    /// </summary>
+    [Parameter] public string? Title { get; set; }
+
+    /// <summary>
+    /// Any content you want to display in the step
+    /// </summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    protected override void OnInitialized()
+    {
+        Console.WriteLine("WizardStep initialized");
+        ParentWizard?.RegisterStep(new WizardStepDefinition
+        {
+            Title = Title,
+            ChildContent = ChildContent
+        });
+        Console.WriteLine("Step registered: {0}", ParentWizard is not null);
+    }
+
+    public void Dispose()
+    {
+        // Optionally handle cleanup or deregistration
+        // if you want to remove steps dynamically
+    }
+}

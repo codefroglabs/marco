@@ -1,0 +1,42 @@
+<div style="@Styles" class="@BackgroundClass resizable relative group/resizable overflow-visible focus-within:z-10">
+    <svg width="@Width" height="@Height" class="absolute top-0 left-0 @Display" overflow="visible">
+        <defs>
+            <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="3.5" result="coloredBlur"/>
+                <feMerge>
+                    <feMergeNode in="coloredBlur"/>
+                    <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+            </filter>
+        </defs>
+        <!-- Outer stroke -->
+        @* <rect class="move-handle" x="0" y="0" width="@Width" height="@Height" fill="#fff" stroke="#0067a8" stroke-width="4" filter="url(#glow)"/> *@
+        <!-- Inner stroke -->
+        @* <rect class="move-handle" x="2" y="2" width="@(@Width - 4)" height="@(@Height - 4)" fill="#fff" stroke="white" stroke-width="2"/> *@
+        <rect class="move-handle" x="0" y="0" width="@Width" height="@Height" fill="transparent" stroke="#0067a8" stroke-width="2" filter="url(#glow)"/>
+        <!-- Top-left handle -->
+        <rect class="z-20 blk-resize e blk-resize-tl" x="-5" y="-5" width="10" height="10" fill="white" stroke="#0067a8" stroke-width="4" filter="url(#glow)"/>
+        <!-- Top-right handle -->
+        <rect class="z-20 blk-resize e blk-resize-tr" x="@(@Width - 5)" y="-5" width="10" height="10" fill="white" stroke="#0067a8" stroke-width="4" filter="url(#glow)"/>
+        <!-- Bottom-left handle -->
+        <rect class="z-20 blk-resize e blk-resize-bl" x="-5" y="@(@Height - 5)" width="10" height="10" fill="white" stroke="#0067a8" stroke-width="4" filter="url(#glow)"/>
+        <!-- Bottom-right handle -->
+        <rect class="z-20 blk-resize blk-resize-br" x="@(@Width - 5)" y="@(@Height - 5)" width="10" height="10" fill="white" stroke="#0067a8" stroke-width="4" filter="url(#glow)"/>
+    </svg>
+    @ChildContent
+</div>
+
+@code {
+    [Parameter, EditorRequired] public required RenderFragment ChildContent { get; set; }
+
+    [Parameter] public string BackgroundClass { get; set; } = "bg-transparent";
+
+    [Parameter] public double Width { get; set; } = 100;
+
+    [Parameter] public double Height { get; set; } = 100;
+
+    [Parameter] public bool Enabled { get; set; }
+    private string Styles = "";
+    // private string Styles => Width != 0 || Height != 0 ? $"width: {Width}px; height: {Height}px;" : "";
+    private string Display => Enabled ? "" : "hidden";
+}

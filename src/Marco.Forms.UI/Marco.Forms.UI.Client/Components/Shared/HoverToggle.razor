@@ -1,0 +1,25 @@
+<TrackHover OnHoverChanged="HandleHover">
+    @ChildContent
+    @if (IsVisible && HoverContent != null)
+    {
+        <div @onclick:stopPropagation>
+        @HoverContent
+        </div>
+    }
+</TrackHover>
+
+@code {
+    [Parameter] public bool IsVisible { get; set; } = false;
+
+    // The main content to hover over
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    // Content to render when hover state is active
+    [Parameter] public RenderFragment? HoverContent { get; set; }
+
+    private void HandleHover(bool hovering)
+    {
+        IsVisible = hovering;
+    }
+
+}

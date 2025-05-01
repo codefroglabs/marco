@@ -1,0 +1,156 @@
+@using Marco.Forms.UI.Client.Components.Actions
+@using Marco.Forms.UI.Client.Models
+@using Pure.Blazor.Components
+@using Pure.Blazor.Components.Icons
+<ul tabindex="0" @ref="ElementReference" class="focus-visible:outline-transparent bg-gray-50 @(HasScrollbar ? "border-r-0 rounded-tl-lg rounded-bl-lg" : "rounded-lg") py-2 flex flex-col shadow">
+    <li @onclick="@(() => SelectBlockActionAsync(new MoveUpAction(Block.BlockId!)))" tabindex="-1" class="flex gap-2 hover:bg-gray-100 p-2 cursor-pointer">
+        <div class="flex gap-2">
+            <PureIcon Size="PureSize.Small" Icon="PureIcons.IconArrowUp"/>
+            <div class="text-xs font-medium">Move up</div>
+        </div>
+    </li>
+    <li @onclick="@(() => SelectBlockActionAsync(new MoveDownAction(Block.BlockId!)))" tabindex="-1" class="flex gap-2 hover:bg-gray-100 p-2 cursor-pointer">
+        <div class="flex gap-2">
+            <PureIcon Size="PureSize.Small" Icon="PureIcons.IconArrowDown"/>
+            <div class="text-xs font-medium">Move down</div>
+        </div>
+    </li>
+    <li @onclick="@(() => SelectBlockActionAsync(new DeleteBlockAction(Block.BlockId!)))" tabindex="-1" class="flex gap-2 hover:bg-gray-100 p-2 cursor-pointer">
+        <div class="flex gap-2">
+            <PureIcon Size="PureSize.Small" Icon="PureIcons.IconTrash"/>
+            <div class="text-xs font-medium text-red-800">Delete</div>
+        </div>
+    </li>
+    <hr class="text-gray-300" />
+    <li @onclick="@(() => SelectBlockActionAsync(new DebugBlockAction(Block.BlockId!)))" tabindex="-1" class="flex gap-2 hover:bg-gray-100 p-2 cursor-pointer">
+        <div class="flex gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17 17.25 21A2.652 2.652 0 0 0 21 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 1 1-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 0 0 4.486-6.336l-3.276 3.277a3.004 3.004 0 0 1-2.25-2.25l3.276-3.276a4.5 4.5 0 0 0-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26m-1.745 1.437 1.745-1.437m6.615 8.206L15.75 15.75M4.867 19.125h.008v.008h-.008v-.008Z" />
+            </svg>
+
+            <div class="text-xs font-medium text-orange-700">Debug</div>
+        </div>
+    </li>
+</ul>
+
+@code {
+    [Parameter] public bool Visible { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public EventCallback<BlockAction> OnBlockAction { get; set; }
+    [Parameter] public required PageBlock Block { get; set; }
+
+    public bool HasScrollbar { get; set; }
+
+    [Parameter] public BlockDefinition[] Blocks { get; set; } = [];
+
+    private bool FocusRequested { get; set; }
+    private ElementReference ElementReference { get; set; }
+    private string? FocusedBlockId { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await ElementReference.FocusAsync();
+        }
+    }
+
+    public override Task SetParametersAsync(ParameterView parameters)
+    {
+        // If the window is not visible yet, but the parameter is set to visible, focus on the window.
+        FocusRequested = !Visible && parameters.GetValueOrDefault<bool>(nameof(Visible));
+        return base.SetParametersAsync(parameters);
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await base.OnParametersSetAsync();
+
+        if (FocusRequested)
+        {
+            // focus with Task.Run to avoid an issue caused by the element reference
+            // not being available at this time
+            await Task.Run(async () => await ElementReference.FocusAsync());
+            FocusRequested = false;
+        }
+    }
+
+    private async Task OnKeyDown(KeyboardEventArgs obj)
+    {
+        Console.WriteLine("Key: {0}", obj.Key);
+        if (obj is { Key: "Escape" } or { Key: "Backspace" } or { Key: " " })
+        {
+            await CancelAsync();
+            return;
+        }
+
+        if (obj.IsArrow())
+        {
+            await OnArrowKey(obj.ToKeyboardDirection());
+        }
+
+        // if (obj is { Key: "Enter" } && FocusedBlockId is not null)
+        // {
+        //     var blockDef = Blocks.SingleOrDefault(p => p.Id == FocusedBlockId);
+        //     if (blockDef is not null)
+        //     {
+        //         await SelectBlockAsync(blockDef);
+        //     }
+        // }
+    }
+
+    private async Task SelectBlockActionAsync(BlockAction action)
+    {
+        ArgumentNullException.ThrowIfNull(Block);
+
+        await OnBlockAction.InvokeAsync(action);
+    }
+
+    private async Task CancelAsync()
+    {
+        await OnCancel.InvokeAsync();
+    }
+
+    private async Task OnArrowKey(KeyboardDirection direction)
+    {
+        var task = direction switch
+        {
+            KeyboardDirection.Down => MoveDownAsync(),
+            KeyboardDirection.Up => MoveUpAsync(),
+            _ => Task.CompletedTask
+        };
+
+        await task;
+    }
+
+    private Task MoveDownAsync()
+    {
+        if (FocusedBlockId is null)
+        {
+            // Focus on the first block
+            FocusedBlockId = Blocks.FirstOrDefault()?.Id;
+            return Task.CompletedTask;
+        }
+
+        // Focus on the next block, if found. otherwise, stay on the current block.
+        FocusedBlockId = Blocks.SkipWhile(b => b.Id != FocusedBlockId).Skip(1).FirstOrDefault()?.Id ?? FocusedBlockId;
+
+        return Task.CompletedTask;
+    }
+
+    private Task MoveUpAsync()
+    {
+        if (FocusedBlockId is null)
+        {
+            // Focus on the first block
+            FocusedBlockId = Blocks.FirstOrDefault()?.Id;
+            return Task.CompletedTask;
+        }
+
+        // Focus on the previous block, if found. otherwise, stay on the current block.
+        FocusedBlockId = Blocks.TakeWhile(b => b.Id != FocusedBlockId).LastOrDefault()?.Id ?? FocusedBlockId;
+
+        return Task.CompletedTask;
+    }
+
+}

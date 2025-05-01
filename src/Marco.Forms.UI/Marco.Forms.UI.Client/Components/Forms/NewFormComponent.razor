@@ -1,0 +1,159 @@
+@using Marco.Forms.UI.Client.Models
+@using Pure.Blazor.Components
+@rendermode InteractiveAuto
+<EditForm EditContext="editContext" OnValidSubmit="CreateForm">
+    <div class="flex flex-col gap-4">
+
+        @if (Errors is not null)
+        {
+            foreach (var error in Errors)
+            {
+                <PureAlert Accent="Accent.Danger">
+                    @error.Key failed validation:
+                    <ul>
+                        @foreach (var message in error.Value)
+                        {
+                            <li>@message</li>
+                        }
+                    </ul>
+                </PureAlert>
+            }
+        }
+        <div class="flex flex-col gap-1">
+            <label class="text-[12px] pb-1 pt-2 font-bold uppercase text-gray-600"
+                   for="@Form.FormId">Form Name</label>
+            <InputText name="Name" class="border-1 rounded border-brand-600 px-1 py-0.5 text-sm"
+                       autocomplete="off" id="@Form.FormId"
+                       @bind-Value="@Form.Name"/>
+        </div>
+        @foreach (var formSection in Form.Sections)
+        {
+            <div class="section divide-y divide-gray-200 flex flex-col gap-4">
+                <label class="text-[10px] pb-1 pt-2 font-bold uppercase text-gray-600"
+                       for="@formSection.FormSectionId">@formSection.Name</label>
+                <InputText class="border-1 rounded border-brand-600 px-1 py-0.5 text-sm"
+                           autocomplete="off" id="@formSection.FormSectionId"
+                           @bind-Value="@formSection.Name"/>
+                @foreach (var field in formSection.Fields)
+                {
+                    <div class="flex gap-2">
+                        <div class="flex flex-col">
+                            <label class="text-[10px] pb-1 pt-2 font-bold uppercase text-gray-600"
+                                   for="@field.FormFieldId">Question</label>
+                            <InputText class="border-1 rounded border-brand-600 px-1 py-0.5 text-sm"
+                                       autocomplete="off" id="@field.FormFieldId"
+                                       @bind-Value="field.Name"/>
+                        </div>
+                        <div class="flex flex-col">
+                            <label class="text-[10px] pb-1 pt-2 font-bold uppercase text-gray-600">Question type</label>
+                            <select class="p-1 border-1 border-gray-300 rounded-sm"
+                                    @onchange="v => SetFieldType(field, v.Value)">
+                                @foreach (var option in fieldTypeOptions)
+                                {
+                                    <option value="@option.value">@option.label</option>
+                                }
+                            </select>
+                            @* <SelectBlock Field="fieldType" FieldChanged="s => SetFieldType(field, s)"></SelectBlock> *@
+                        </div>
+                        @if (field.Type is FieldType.Select)
+                        {
+                            <div class="flex flex-col py-3">
+                                <label class="text-[10px] pb-1 pt-2 font-bold uppercase text-gray-800">Options</label>
+
+                                @foreach (var option in field.Options)
+                                {
+                                    <div class="flex flex-row gap-2">
+                                        <InputText class="border-1 rounded border-brand-600 px-1 py-0.5 text-sm"
+                                                   autocomplete="off" id="@field.FormFieldId" placeholder="Label"
+                                                   @bind-Value="option.Label"/>
+                                        <InputText class="border-1 rounded border-brand-600 px-1 py-0.5 text-sm"
+                                                   autocomplete="off" id="@field.FormFieldId" placeholder="Value"
+                                                   @bind-Value="option.Value.TextValue"/>
+                                    </div>
+                                }
+                                <div class="flex flex-row">
+                                    <button type="button"
+                                            @onclick="@(() => field.Options.Add(new FormFieldOption{ Label="", Value = new() }))">Add
+                                    </button>
+                                </div>
+                                @* <SelectBlock Field="fieldType" FieldChanged="s => SetFieldType(field, s)"></SelectBlock> *@
+                            </div>
+                        }
+                    </div>
+                }
+                <PureButton Variant="PureVariant.Outline" Accent="Accent.Brand"
+                            OnClick="() => AddQuestion(formSection)">Add
+                    Question
+                </PureButton>
+            </div>
+        }
+        <div class="flex flex-row gap-2">
+            <PureButton Variant="PureVariant.Outline" Accent="Accent.Brand" OnClick="AddSection">Add Section
+            </PureButton>
+            <PureButton Loading="Loading" LoadingText="Creating form..." Variant="PureVariant.Default"
+                        Accent="Accent.Brand" ButtonType="ButtonType.Submit">Create form
+            </PureButton>
+        </div>
+    </div>
+</EditForm>
+
+@code {
+    public bool Loading { get; set; }
+
+    private static List<(string label, FieldType value)> fieldTypeOptions =
+    [
+        ("Text", FieldType.Text), ("Checkbox", FieldType.Checkbox), ("Date", FieldType.Date), ("Time", FieldType.Time),
+        ("DateTime", FieldType.DateTime), ("Select", FieldType.Select)
+    ];
+
+    // private FormField fieldType = new FormField("fieldtypes", "Field Types") { Options = fieldTypeOptions };
+
+    public Dictionary<string, string[]>? Errors { get; set; }
+
+    private EditContext? editContext;
+
+    [Parameter]
+    public FormDto Form { get; set; } = new()
+    {
+        FormId = Uuid.New(),
+        Name = "New Form",
+        Sections = [new FormSection(Uuid.New(), "New section") { Fields = [] }]
+    };
+
+    [Parameter] public EventCallback OnComplete { get; set; }
+    [Inject] public required FormStore FormStore { get; set; }
+
+    protected override void OnInitialized()
+    {
+        editContext = new EditContext(Form);
+    }
+
+    private async Task CreateForm()
+    {
+        Loading = true;
+        await FormStore.CreateFormAsync(Form);
+        await OnComplete.InvokeAsync();
+
+        Loading = false;
+    }
+
+    private void AddQuestion(FormSection section)
+    {
+        section.Fields.Add(new FieldSchema{ FormFieldId = Uuid.New(), Name = "New question", Type = FieldType.Text });
+    }
+
+    private void AddSection()
+    {
+        Form.Sections.Add(new FormSection(Uuid.New(), "New Section") { Fields = [] });
+    }
+
+    private Task SetFieldType(FieldSchema field, object? o)
+    {
+        Console.WriteLine($"Setting field type to {o}");
+        if (o is not FieldType s) return Task.CompletedTask;
+        field.Type = s;
+
+        return Task.CompletedTask;
+    }
+
+}

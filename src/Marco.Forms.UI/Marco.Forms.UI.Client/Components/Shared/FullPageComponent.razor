@@ -1,0 +1,98 @@
+@using Microsoft.FluentUI.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Sections
+@using Marco.Forms.UI.Client.Components.Controls
+@using Marco.Forms.UI.Client.Components.Properties
+@using Marco.Forms.UI.Client.Models
+@using Pure.Blazor.Components
+@layout FullPageLayout
+<div class="flex min-h-full flex-col">
+    <header class="shrink-0">
+        <div class="lg:hidden">
+            <PureBanner Accent="Accent.Default">This page is best viewed on a computer with resolution > 1024px.
+            </PureBanner>
+        </div>
+        <SectionOutlet SectionId="TopBarSection"/>
+    </header>
+
+    <div class="mx-auto flex w-full items-start">
+        @if (ShowStartColumn)
+        {
+            <SectionOutlet SectionId="StartColSection"/>
+            @* <DockableContent Position="(50, 100)" PositionAnchor="PositionAnchor.Start" *@
+            @*                  OnClickCancel="() => IsDocked = true"> *@
+            @*     <SectionOutlet SectionId="StartColSection"/> *@
+            @* </DockableContent> *@
+        }
+        <main class="flex-1 h-[calc(100vh-64px)] overflow-y-auto px-6 py-6 bg-gray-200 shadow-inner">
+            @ChildContent
+        </main>
+
+        @if (ShowEndColumn)
+        {
+            <DockableContent Position="(50, 100)" PositionAnchor="PositionAnchor.End"
+                             OnClickCancel="() => IsDocked = true">
+                <SectionOutlet SectionId="EndColSection"/>
+            </DockableContent>
+        }
+        @* @if (IsDocked) *@
+        @* { *@
+        @*     <aside *@
+        @*         class="sticky top-8 hidden w-80 shrink-0 lg:block h-[calc(100vh-83px)] bg-gray-50 overflow-y-auto border-t-1 border-gray-200"> *@
+        @*         <PureButton OnClick="() => IsDocked = false">Undock</PureButton> *@
+        @*         <!-- Right column area --> *@
+        @*         <SectionOutlet SectionId="EndColSection" @rendermode="InteractiveWebAssembly"/> *@
+        @*     </aside> *@
+        @* } *@
+        @* else *@
+        @* { *@
+        @*     <DockableContent Position="(50,100)" PositionAnchor="PositionAnchor.End" *@
+        @*                      OnClickCancel="() => IsDocked = true"> *@
+        @*         <SectionOutlet SectionId="EndColSection" @rendermode="InteractiveWebAssembly"/> *@
+        @*     </DockableContent> *@
+        @* } *@
+    </div>
+</div>
+<FluentToastProvider/>
+<FluentDialogProvider/>
+<FluentTooltipProvider/>
+<FluentMessageBarProvider/>
+<FluentMenuProvider/>
+
+@code {
+    internal static object StartColSection = new();
+    internal static object EndColSection = new();
+    internal static object TopBarSection = new();
+
+    private AccountDetails? _accountDetails;
+    [Parameter] public bool ShowStartColumn { get; set; } = true;
+
+    [Parameter] public bool ShowEndColumn { get; set; } = true;
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    public bool IsDocked { get; set; } = true;
+    [Inject] public required ServerClient ServerClient { get; set; }
+    [Inject] public required ILogger<FullPageComponent> Logger { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _accountDetails = await GetAccountDetails();
+        }
+        catch (Exception e)
+        {
+            Logger.LogError(e, "Failed to get account details, defaulting to ghost account.");
+            _accountDetails = new AccountDetails
+            {
+                AccountId = "ghost",
+                AccountStatus = (int)AccountStatus.Active
+            };
+        }
+    }
+
+    private async Task<AccountDetails?> GetAccountDetails()
+    {
+        return await ServerClient.GetAccountDetailsAsync();
+    }
+
+}

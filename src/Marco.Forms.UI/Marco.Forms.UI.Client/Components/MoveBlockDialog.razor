@@ -1,0 +1,19 @@
+<h3>MoveBlockDialog</h3>
+@Block.BlockPosition
+<PureInput Value="@Block.BlockPosition" ValueChanged="PositionChanged" InputType="InputType.Number" Label="Position" />
+
+@code {
+    [Parameter, EditorRequired] public required PageBlock Block { get; set; }
+    [Parameter, EditorRequired] public required MarcoCanvasState CanvasState { get; set; }
+    [Parameter, EditorRequired] public required EventCallback<MarcoCanvasState> CanvasStateChanged { get; set; }
+
+    private void PositionChanged(string s)
+    {
+        if (double.TryParse(s, out var position))
+        {
+            var block = Block with { BlockPosition = position };
+            CanvasState.Sync(block);
+        }
+    }
+
+}

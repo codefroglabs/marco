@@ -1,0 +1,128 @@
+﻿@using Pure.Blazor.Components.Icons
+@using Pure.Blazor.Components
+@inherits Pure.Blazor.Components.PureComponent
+<ul class="@ApplyStyle("font-medium")" role="tree">
+    @foreach (var item in Items)
+    {
+        <li class="@ItemCss(item)" role="treeitem"
+            @onclick="() => ItemSelected(item)"
+            @ondblclick="() => ItemToggleCollapse(item)"
+            @onclick:stopPropagation="true"
+            @onclick:preventDefault="true">
+            <div class="flex items-center align-middle justify-between gap-1 group/treeitem text-sm">
+                <div class="flex items-center justify-items-start">
+                    <PureIcon Icon="@(item.IsCollapsed ? PureIcons.IconChevronRight : PureIcons.IconChevronDown)" Styles="@(item.HasChildren ? "text-gray-300" : "text-transparent")" Size="PureSize.Small"/>
+                    @switch (item)
+                    {
+                        case { Type: TreeItemType.Folder, IsCollapsed: true }:
+                            <PureIcon Icon="PureIcons.IconFolder" Styles="@(item.IsSelected ? "text-white" : "text-gray-400")" Size="PureSize.Small"/>
+                            break;
+                        case { Type: TreeItemType.Folder, IsCollapsed: false }:
+                            <PureIcon Icon="PureIcons.IconFolderOpen" Styles="@(item.IsSelected ? "text-white" : "text-gray-400")"  Size="PureSize.Small"/>
+                            break;
+                        default:
+                            <PureIcon Icon="PureIcons.IconFile" Styles="@(item.IsSelected ? "text-white" : "text-gray-400")"  Size="PureSize.Small"/>
+                            break;
+                    }
+                    @if (item.PromptRename)
+                    {
+                        <PureInput
+                            @ref="item.Reference"
+                            Styles="py-1 px-1 rounded-none text-sm w-32 m-0"
+                            Placeholder="@(item.Type == TreeItemType.File ? "New File" : "New Folder")"
+                            @bind-Value="@item.Name"
+                            OnBlur="(_) => item.PromptRename = false"
+                            Suffix="CheckMarkClose"
+                            OnSuffixClick="(_) => item.PromptRename = false"/>
+                    }
+                    else
+                    {
+                        <div class="pl-1">
+                            @item.Name
+                        </div>
+                    }
+                </div>
+                <div class="flex flex-grow justify-between items-center">
+                    <div class="">
+                        @* <PureDropdown Position="DropdownPosition.Right" Icon="IconEllipsis" Size="PureSize.ExtraSmall" Styles="text-gray-300 group-hover/treeitem:text-gray-400 hover:bg-gray-300"> *@
+                        @*     <MenuItems> *@
+                        @*         <PureDropdownItem Accent="Accent.Danger" Styles="w-36">Item 1</PureDropdownItem> *@
+                        @*     </MenuItems> *@
+                        @* </PureDropdown> *@
+                    </div>
+                </div>
+            </div>
+        </li>
+        @if (@item is { HasChildren: true, IsCollapsed: false })
+        {
+            <TreeView Items=item.Children OnSelect="ItemSelected" Styles="pl-4"/>
+        }
+    }
+</ul>
+
+@code {
+    [Inject] public required IJSRuntime Js { get; set; } = null!;
+    [Parameter] public List<TreeViewItem> Items { get; set; } = [];
+
+    [Parameter] public EventCallback<TreeViewItem> OnSelect { get; set; }
+    private string ItemCss(TreeViewItem item) => $"border-transparent py-0.5 pr-1 border-1 text-gray-800 {(item.Type is TreeItemType.Folder ? FolderCss(item) : FileCss(item))} cursor-pointer";
+    private string FolderCss(TreeViewItem item) => $"{(item.IsSelected ? "bg-brand-700 text-white" : "text-gray-700 hover:bg-gray-200")}";
+    private string FileCss(TreeViewItem item) => $"{(item.IsSelected ? "bg-brand-600 text-white" : "text-gray-700 hover:bg-gray-200")}";
+
+    public static readonly RenderFragment CheckMarkClose = @<PureIcon Icon=PureIcons.IconCheckCircle/>;
+
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await base.OnParametersSetAsync();
+    }
+
+
+    private async Task ItemSelected(TreeViewItem selectedItem)
+    {
+        UpdateSelection(Items, selectedItem);
+
+        await OnSelect.InvokeAsync(selectedItem);
+    }
+
+    private void ItemToggleCollapse(TreeViewItem selectedItem)
+    {
+        selectedItem.IsCollapsed = !selectedItem.IsCollapsed;
+
+        //TODO notify parent that tree changed (currently we are lucky that ItemSelected gets called twice, but we'll likely want to debounce the click to only allow single or double click instead of the current behaviour, which invokes both (single click twice, double click once))
+    }
+
+    protected override void BuildCss()
+    {
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        var item = Items.SingleOrDefault(item => item.PromptRename && item.Reference is not null);
+
+        if (item is not null)
+        {
+            await item.Reference!.FocusAsync();
+        }
+
+        await base.OnAfterRenderAsync(firstRender);
+    }
+
+    private void UpdateSelection(List<TreeViewItem> items, TreeViewItem selectedItem)
+    {
+        foreach (var item in items)
+        {
+            if (item == selectedItem)
+            {
+                item.IsSelected = !item.IsSelected;
+                if (item.HasChildren)
+                    UpdateSelection(item.Children!, selectedItem);
+            }
+            else
+            {
+                item.IsSelected = false;
+            }
+        }
+    }
+
+}

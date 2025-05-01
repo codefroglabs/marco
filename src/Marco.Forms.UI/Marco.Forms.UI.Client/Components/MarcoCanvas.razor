@@ -1,0 +1,27 @@
+@using Marco.Forms.UI.Client.Components.Blocks
+@using Marco.Forms.UI.Client.Models
+@if (CanvasState.RootBlock is not null)
+{
+    <ContainerBlockView Block="CanvasState.RootBlock">
+        @if (CanvasState.Blocks.Count(p => p.BlockType != BlockTypes.Root) == 0)
+        {
+            <p>Add a block to get started.</p>
+        }
+
+        @foreach (var block in TopLevelBlocks.OrderBy(p => p.BlockPosition))
+        {
+            <BlockController
+                SiteId="@SiteId"
+                Block="block"
+                CanvasState="CanvasState"
+                CanvasStateChanged="CanvasStateChanged" />
+        }
+    </ContainerBlockView>
+}
+else
+{
+    <div class="flex flex-col items-center justify-center h-full">
+        <p class="text-2xl font-semibold">No blocks found</p>
+        <p class="text-sm text-gray-500">Add a block to get started.</p>
+    </div>
+}

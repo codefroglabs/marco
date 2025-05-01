@@ -1,0 +1,43 @@
+@page "/example-wizard"
+@using Marco.Forms.UI.Client.Components.Forms
+@rendermode InteractiveServer
+
+@* <h3>Example Wizard Usage</h3> *@
+<div class="@("@container/main mx-auto w-screen py-4 md:py-4 px-8 sm:px-16 lg:px-32 h-screen")">
+    <FormBuilderContainer/>
+</div>
+@* *@
+@* <hr /> *@
+@* *@
+@* <Wizard OnFinish="@HandleWizardFinished"> *@
+@*     <WizardStep Title="Step One"> *@
+@*         <div> *@
+@*             <h4>Personal Info</h4> *@
+@*             <p>Ask for user personal info here...</p> *@
+@*         </div> *@
+@*     </WizardStep> *@
+@* *@
+@*     <WizardStep Title="Step Two"> *@
+@*         <div> *@
+@*             <h4>Additional Details</h4> *@
+@*             <p>Some other information the user must fill out...</p> *@
+@*         </div> *@
+@*     </WizardStep> *@
+@* *@
+@*     <WizardStep Title="Step Three"> *@
+@*         <div> *@
+@*             <h4>Review & Submit</h4> *@
+@*             <p>Review your data here...</p> *@
+@*         </div> *@
+@*     </WizardStep> *@
+@* </Wizard> *@
+
+@code {
+
+    private void HandleWizardFinished()
+    {
+        // The wizard completed. Save data, redirect, etc.
+        Console.WriteLine("Wizard finished!");
+    }
+
+}

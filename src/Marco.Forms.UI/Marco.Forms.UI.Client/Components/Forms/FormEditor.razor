@@ -1,0 +1,31 @@
+<div class="form-editor flex flex-col grow overflow-auto">
+    @for (var i = 0; i < FormSchema.Fields.Count; i++)
+    {
+        var i1 = i;
+
+        <div class="flex items-end">
+            <FormFieldEditor Field="@FormSchema.Fields[i1]"/>
+            <!-- Optional insert button at each position -->
+
+            @* <Button Variant="Variants.Ghost" Size="Sizes.Sm" @onclick="() => OnInsertField.InvokeAsync(i1)"> *@
+            @*     @if (i1 == SelectedPosition) *@
+            @*     { *@
+            @*         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4"> *@
+            @*             <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" /> *@
+            @*         </svg> *@
+            @* *@
+            @*     }Insert After *@
+            @* </Button> *@
+        </div>
+    }
+    @if (FormSchema.Fields.Count == 0)
+    {
+        <p class="text-gray-500 text-4xl font-bold">Blank canvas</p>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public required FormSchema FormSchema { get; set; }
+    [Parameter] public EventCallback<int> OnInsertField { get; set; }
+    [Parameter] public int SelectedPosition { get; set; }
+}

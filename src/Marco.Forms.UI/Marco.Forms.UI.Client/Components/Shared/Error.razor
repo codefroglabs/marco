@@ -1,0 +1,15 @@
+<CascadingValue Value="this">
+    @ChildContent
+</CascadingValue>
+
+@code {
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Inject] public required ILogger<Error> Logger { get; set; }
+
+    public void ProcessError(Exception ex)
+    {
+        Logger.LogError(ex, "An error occurred");
+    }
+
+}

@@ -1,0 +1,167 @@
+@using Marco.Forms.UI.Client.Models
+@using Pure.Blazor.Components
+<div class="flex flex-col gap-3 pb-2 text-sm">
+    <div>
+        <legend class="text-[10px] pb-1 pt-2 font-bold uppercase text-gray-600">Align</legend>
+        <div class="flex gap-2">
+            <div>
+                <PureButton Variant="PureVariant.Outline" Size="PureSize.Small"
+                            OnClick="@(() => TextAlignChanged(TextAlign.Left))" Styles="rounded-none">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                         stroke="currentColor" class="size-4">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                              d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12"/>
+                    </svg>
+                </PureButton>
+            </div>
+            <div>
+                <PureButton Variant="PureVariant.Outline" Size="PureSize.Small"
+                            OnClick="@(() => TextAlignChanged(TextAlign.Center))" Styles="rounded-none">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                         stroke="currentColor" class="size-4">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                              d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"/>
+                    </svg>
+                </PureButton>
+            </div>
+            <div>
+                <PureButton Variant="PureVariant.Outline" Size="PureSize.Small"
+                            OnClick="@(() => TextAlignChanged(TextAlign.Right))" Styles="rounded-none">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                         stroke="currentColor" class="size-4">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                              d="M3.75 6.75h16.5M3.75 12h16.5M12 17.25h8.25"/>
+                    </svg>
+                </PureButton>
+            </div>
+
+        </div>
+    </div>
+    @if (Block.BlockType == BlockTypes.Section || Block.BlockType == BlockTypes.Root && Layout.GridLayoutOptions is not null)
+    {
+        <div class="flex flex-col gap-1 px-1 pb-2 text-sm">
+            <legend class="text-[10px] pt-2 font-bold uppercase text-gray-500">Grid Options</legend>
+            <PureSlider Min="1" Max="12" Step="1" Value="@GridColumns" ValueChanged="GridColumnsChanged"></PureSlider>
+        </div>
+    }
+
+    <SpacingAdjuster Margin="Margin" MarginChanged="MarginChanged" Padding="Padding" PaddingChanged="PaddingChanged"/>
+</div>
+
+@code {
+    public double GridColumns { get; set; }
+    public Spacing Margin { get; set; } = new();
+    public Spacing Padding { get; set; } = new();
+    [Parameter] public required BlockLayout Layout { get; set; }
+    [Parameter] public EventCallback<BlockLayout> LayoutChanged { get; set; }
+    [Parameter] public required BlockFormatting Formatting { get; set; }
+    [Parameter] public EventCallback<BlockFormatting?> FormattingChanged { get; set; }
+    [Parameter, EditorRequired] public required PageBlock Block { get; set; }
+    [Inject] public required IJSRuntime JsRuntime { get; set; }
+    [Inject] public required ILogger<LayoutProperties> Logger { get; set; }
+
+    private readonly CancellationTokenSource cts = new();
+
+    protected override void OnInitialized()
+    {
+        UpdateLayout();
+    }
+
+    protected override void OnParametersSet()
+    {
+        UpdateLayout();
+    }
+
+    private void UpdateLayout()
+    {
+        if (Layout.GridLayoutOptions is null && Layout.FixedLayoutOptions is null)
+        {
+            Layout.GridLayoutOptions = new();
+            Layout.LayoutType = BlockLayoutType.Grid;
+        }
+
+        if (Layout.GridLayoutOptions is not null)
+        {
+            GridColumns = Convert.ToDouble(Layout.GridLayoutOptions.TemplateColumns);
+        }
+        Margin = Formatting.Margin;
+        Padding = Formatting.Padding;
+    }
+
+    private async Task PaddingChanged(Spacing padding)
+    {
+        Padding = padding;
+
+        // todo: replace padding definition with generic spacing
+        Formatting.Padding = new()
+        {
+            Bottom = padding.Bottom,
+            Left = padding.Left,
+            Right = padding.Right,
+            Top = padding.Top,
+            Unit = padding.Unit
+        };
+        await FormattingChanged.InvokeAsync(Formatting);
+    }
+
+    private async Task MarginChanged(Spacing spacing)
+    {
+        Margin = spacing;
+        Formatting.Margin = new()
+        {
+            Bottom = spacing.Bottom,
+            Left = spacing.Left,
+            Right = spacing.Right,
+            Top = spacing.Top,
+            Unit = spacing.Unit
+        };
+        await FormattingChanged.InvokeAsync(Formatting);
+    }
+
+    private void GridColumnsChanged(double value)
+    {
+        Layout.GridLayoutOptions ??= new();
+        var layout = Layout with { GridLayoutOptions = Layout.GridLayoutOptions with { TemplateColumns = Convert.ToInt32(value) } };
+        LayoutChanged.InvokeAsync(layout);
+    }
+
+    // private async Task PlacementChanged(PlacementDefinition placement)
+    // {
+    //     Formatting.PlacementDefinition = placement;
+    //     await FormattingChanged.InvokeAsync(Formatting);
+    // }
+
+    private async Task BottomPaddingChanged(string stringValue)
+    {
+        if (int.TryParse(stringValue, out var value))
+        {
+            Formatting.Padding = Formatting.Padding with { Bottom = value };
+            await FormattingChanged.InvokeAsync(Formatting);
+        }
+    }
+
+    private async Task LeftPaddingChanged(string stringValue)
+    {
+        if (int.TryParse(stringValue, out var value))
+        {
+            Formatting.Padding = Formatting.Padding with { Left = value };
+            await FormattingChanged.InvokeAsync(Formatting);
+        }
+    }
+
+    private async Task RightPaddingChanged(string stringValue)
+    {
+        if (int.TryParse(stringValue, out var value))
+        {
+            Formatting.Padding = Formatting.Padding with { Right = value };
+            await FormattingChanged.InvokeAsync(Formatting);
+        }
+    }
+
+    private async Task TextAlignChanged(TextAlign opt)
+    {
+        Formatting.TextAlign = opt;
+        await FormattingChanged.InvokeAsync(Formatting);
+    }
+
+}

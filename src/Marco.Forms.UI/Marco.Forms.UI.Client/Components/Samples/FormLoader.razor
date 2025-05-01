@@ -1,0 +1,23 @@
+@using Marco.Forms.UI.Client.Components.Forms
+@inject FormStore FormStore
+
+@if (Form is not null)
+{
+    <FormRenderer Form="Form"/>
+}
+else
+{
+    <p>Loading...</p>
+}
+
+@code {
+    [Parameter] public required string FormId { get; set; }
+
+    public FormDto? Form { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Form = await FormStore.GetFormAsync(FormId);
+    }
+
+}

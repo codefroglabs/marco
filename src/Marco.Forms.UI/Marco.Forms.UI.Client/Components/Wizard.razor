@@ -1,0 +1,84 @@
+
+<CascadingValue Value="this">
+    <div class="wizard-container">
+        <div class="wizard-steps">
+            <div style="display: none;">
+                @ChildContent
+            </div>
+            @if (ShowStepIndicators)
+            {
+                <ol class="step-indicators">
+                    @for (int i = 0; i < Steps.Count; i++)
+                    {
+                        <li class="@(CurrentStepIndex == i ? "active" : "")">
+                            @Steps[i].Title
+                        </li>
+                    }
+                </ol>
+            }
+        </div>
+
+        @if (CurrentStepIndex < Steps.Count)
+        {
+            <div class="wizard-step-content">
+                @Steps[CurrentStepIndex].ChildContent
+            </div>
+        }
+
+        <!-- Wizard Navigation Buttons -->
+        <div class="wizard-navigation">
+            @if (CurrentStepIndex > 0)
+            {
+                <button class="btn btn-secondary" @onclick="PreviousStep">Previous</button>
+            }
+            @if (CurrentStepIndex < Steps.Count - 1)
+            {
+                <button class="btn btn-primary" @onclick="NextStep">Next</button>
+            }
+            else
+            {
+                <button class="btn btn-success" @onclick="FinishWizard">Finish</button>
+            }
+        </div>
+    </div>
+</CascadingValue>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public bool ShowStepIndicators { get; set; }
+
+    internal List<WizardStepDefinition> Steps { get; set; } = [];
+
+    private int CurrentStepIndex { get; set; } = 0;
+
+    // Expose event for the outside to know when wizard is complete
+    [Parameter] public EventCallback OnFinish { get; set; }
+
+    public void RegisterStep(WizardStepDefinition step)
+    {
+        Steps.Add(step);
+        StateHasChanged();
+    }
+
+    private void NextStep()
+    {
+        if (CurrentStepIndex < Steps.Count - 1)
+        {
+            CurrentStepIndex++;
+        }
+    }
+
+    private void PreviousStep()
+    {
+        if (CurrentStepIndex > 0)
+        {
+            CurrentStepIndex--;
+        }
+    }
+
+    private async Task FinishWizard()
+    {
+        await OnFinish.InvokeAsync(null);
+    }
+
+}
