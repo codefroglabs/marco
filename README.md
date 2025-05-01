@@ -1,5 +1,5 @@
 > [!NOTE]  
-> Marco is freshly extracted from PureBlazor. We're working through demos, documentations, and picking up the progress.
+> Marco is freshly extracted from PureBlazor. We're working through demos, documentations, and picking up the progress. You may find certain actions don't yet work and the code lacks organization.
 
 # Marco
 
