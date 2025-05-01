@@ -61,3 +61,7 @@ Marco may become a part of our SaaS offering in the future, which will provide a
 ## What can I build with Marco?
 
 Here's a demo of the page builder that was built for PureBlazor.
+
+https://github.com/user-attachments/assets/b05e86e4-60e2-4ecc-a6a2-8aa7fa6641fd
+
+
